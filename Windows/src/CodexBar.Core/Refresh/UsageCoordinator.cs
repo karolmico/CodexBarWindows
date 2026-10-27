@@ -68,6 +68,36 @@ public sealed class UsageCoordinator
         }
     }
 
+    /// <summary>
+    /// Refreshes one provider for the setup window's "Check connection" action. It reuses a full
+    /// refresh that is already running, and otherwise fetches only the requested provider so saving a
+    /// token never re-hits every other API.
+    /// </summary>
+    public async Task RefreshProviderAsync(ProviderKey key, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(key);
+
+        if (!this.entries.TryGetValue(key, out var entry))
+        {
+            return;
+        }
+
+        Task? ongoing;
+        lock (this.gate)
+        {
+            ongoing = this.inFlight;
+        }
+
+        if (ongoing is not null)
+        {
+            await ongoing.WaitAsync(cancellationToken).ConfigureAwait(false);
+            return;
+        }
+
+        await this.FetchIntoAsync(entry.Provider, cancellationToken).ConfigureAwait(false);
+        this.Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     /// <summary>Seeds the last good snapshots loaded from the cache; a failed first refresh keeps showing them.</summary>
     public void ApplyCached(IEnumerable<UsageSnapshot> snapshots)
     {

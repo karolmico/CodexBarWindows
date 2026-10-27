@@ -199,6 +199,14 @@
                                             </DataTemplate>
                                         </ItemsControl.ItemTemplate>
                                     </ItemsControl>
+
+                                    <Button Content="Set up…"
+                                            Tag="{Binding Key}"
+                                            HorizontalAlignment="Left"
+                                            Margin="0,2,0,0"
+                                            Style="{StaticResource LinkButton}"
+                                            Click="OnConfigureProvider"
+                                            Visibility="{Binding IsError, Converter={StaticResource BooleanToVisibility}}" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>

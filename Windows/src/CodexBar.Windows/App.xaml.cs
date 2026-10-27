@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
+using CodexBar.Core.Credentials;
 using CodexBar.Core.Diagnostics;
 using CodexBar.Core.Notifications;
 using CodexBar.Core.Persistence;
@@ -10,6 +11,7 @@ using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Refresh;
 using CodexBar.Core.Settings;
+using CodexBar.Core.Setup;
 using CodexBar.Providers.Windows;
 using CodexBar.Windows.Diagnostics;
 
@@ -23,6 +25,7 @@ public partial class App : Application
     private ProviderRegistry registry = null!;
     private SettingsStore settingsStore = null!;
     private SnapshotCache snapshotCache = null!;
+    private FileProviderTokenStore tokenStore = null!;
     private AppSettings settings = null!;
     private UsageCoordinator? coordinator;
     private Tray.TrayHost? trayHost;
@@ -64,8 +67,12 @@ public partial class App : Application
             this.diagnostics = new DiagnosticsService(dataDirectory);
             this.logStore.Info($"Starting CodexBar {AppVersion()} (autostart={this.isAutostartLaunch})");
 
-            // Provider catalog. New providers are added in one place and shared with the CLI.
-            this.registry = ProviderCatalog.Create(this.httpClient);
+            // Provider catalog. New providers are added in one place and shared with the CLI. Saved
+            // token overrides live in one encrypted file under the CodexBar data folder.
+            this.tokenStore = new FileProviderTokenStore(
+                Path.Combine(dataDirectory, "provider-credentials.dat"),
+                new DpapiDataProtector());
+            this.registry = ProviderCatalog.Create(this.httpClient, this.tokenStore);
 
             this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));
             this.snapshotCache = new SnapshotCache(Path.Combine(dataDirectory, "snapshots.json"));
@@ -194,6 +201,7 @@ public partial class App : Application
         window.RefreshRequested += (_, _) => _ = this.RefreshAsync();
         window.SettingsRequested += (_, _) => this.ShowSettings();
         window.DiagnosticsRequested += (_, _) => this.CopyDiagnostics(window);
+        window.ProviderSetupRequested += (_, key) => this.ShowProviderSetup(key);
         window.Closed += (_, _) =>
         {
             if (ReferenceEquals(this.flyout, window))
@@ -264,34 +272,43 @@ public partial class App : Application
     /// <summary>Writes one redacted line per provider so a later report has a real timeline.</summary>
     private void LogRefreshOutcomes()
     {
+        if (this.coordinator is null)
+        {
+            return;
+        }
+
+        foreach (var state in this.coordinator.States)
+        {
+            this.LogProviderOutcome(state);
+        }
+    }
+
+    private void LogProviderOutcome(ProviderState state)
+    {
         if (this.coordinator is null || this.logStore is null)
         {
             return;
         }
 
-        var timings = this.coordinator.Timings.ToDictionary(static timing => timing.Key);
-        foreach (var state in this.coordinator.States)
-        {
-            var duration = timings.TryGetValue(state.Key, out var timing)
-                && timing.LastFetchDuration is { } elapsed
-                    ? string.Create(CultureInfo.InvariantCulture, $"{elapsed.TotalMilliseconds:0} ms")
-                    : "unknown";
+        var duration = this.coordinator.Timings
+            .FirstOrDefault(timing => timing.Key == state.Key)?.LastFetchDuration is { } elapsed
+                ? string.Create(CultureInfo.InvariantCulture, $"{elapsed.TotalMilliseconds:0} ms")
+                : "unknown";
 
-            if (state.Error is { } error)
-            {
-                this.logStore.Warn(
-                    $"{state.Key.Value} failed ({error.Kind}) in {duration}: {error.Message}",
-                    error.Cause);
-            }
-            else if (state.Snapshot is { } snapshot)
-            {
-                this.logStore.Info(
-                    $"{state.Key.Value} ok in {duration}; {snapshot.MeasuredWindows.Count()} windows");
-            }
-            else
-            {
-                this.logStore.Info($"{state.Key.Value} returned no data in {duration}");
-            }
+        if (state.Error is { } error)
+        {
+            this.logStore.Warn(
+                $"{state.Key.Value} failed ({error.Kind}) in {duration}: {error.Message}",
+                error.Cause);
+        }
+        else if (state.Snapshot is { } snapshot)
+        {
+            this.logStore.Info(
+                $"{state.Key.Value} ok in {duration}; {snapshot.MeasuredWindows.Count()} windows");
+        }
+        else
+        {
+            this.logStore.Info($"{state.Key.Value} returned no data in {duration}");
         }
     }
 
@@ -358,6 +375,7 @@ public partial class App : Application
         {
             Owner = null,
         };
+        window.ProviderSetupRequested += (_, _) => this.ShowProviderSetup(owner: window);
 
         if (window.ShowDialog() != true || window.Result is not { } updated)
         {
@@ -391,6 +409,51 @@ public partial class App : Application
         this.coordinator.ApplyCached(cached);
         this.Render();
         _ = this.RefreshAsync();
+    }
+
+    /// <summary>
+    /// Opens the provider setup dialog. It is reachable from the tray Settings window and from a
+    /// failed provider card in the flyout, so "not configured" always has a next step.
+    /// </summary>
+    private void ShowProviderSetup(string? providerKey = null, Window? owner = null)
+    {
+        if (this.coordinator is null)
+        {
+            return;
+        }
+
+        var initial = ProviderKey.TryParse(providerKey, out var parsed) ? parsed : (ProviderKey?)null;
+        var window = new ProviderSetupWindow(
+            ProviderSetupCatalog.For(this.registry.All.Select(provider => provider.Descriptor)),
+            key => this.coordinator?.States.FirstOrDefault(state => state.Key == key),
+            this.CheckProviderConnectionAsync,
+            this.tokenStore,
+            initial,
+            key => this.settings.EnabledProviderKeys.Contains(key))
+        {
+            Owner = owner,
+        };
+
+        window.ShowDialog();
+
+        // The single-provider check already updated the coordinator; repaint and keep the new data
+        // for the next launch.
+        this.Render();
+        this.PersistSnapshots();
+    }
+
+    private async Task CheckProviderConnectionAsync(ProviderKey key, CancellationToken cancellationToken)
+    {
+        if (this.coordinator is null)
+        {
+            return;
+        }
+
+        await this.coordinator.RefreshProviderAsync(key, cancellationToken);
+        if (this.coordinator.States.FirstOrDefault(state => state.Key == key) is { } state)
+        {
+            this.LogProviderOutcome(state);
+        }
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

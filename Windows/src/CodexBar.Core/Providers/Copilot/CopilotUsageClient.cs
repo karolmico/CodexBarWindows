@@ -2,30 +2,43 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CodexBar.Core.Credentials;
 using CodexBar.Core.Identity;
+using CodexBar.Core.Providers;
 using CodexBar.Core.Usage;
 
 namespace CodexBar.Core.Providers.Copilot;
 
 /// <summary>
-/// Finds a GitHub token for the Copilot API: explicit environment variables first, then the signed-in
-/// GitHub CLI. The token is only ever placed in an Authorization header.
+/// Finds a GitHub token for the Copilot API: a token saved in CodexBar wins, then explicit environment
+/// variables, then the signed-in GitHub CLI. The token is only ever placed in an Authorization header.
 /// </summary>
 public sealed class CopilotTokenSource
 {
     private readonly Func<IReadOnlyDictionary<string, string>> environment;
     private readonly Func<CancellationToken, Task<string?>> runGitHubCli;
+    private readonly IProviderTokenStore? tokenStore;
 
     public CopilotTokenSource(
         Func<IReadOnlyDictionary<string, string>>? environment = null,
-        Func<CancellationToken, Task<string?>>? runGitHubCli = null)
+        Func<CancellationToken, Task<string?>>? runGitHubCli = null,
+        IProviderTokenStore? tokenStore = null)
     {
         this.environment = environment ?? ReadEnvironment;
         this.runGitHubCli = runGitHubCli ?? RunGitHubCliAsync;
+        this.tokenStore = tokenStore;
     }
 
     public async Task<string?> ResolveAsync(CancellationToken cancellationToken)
     {
+        // A token saved through the setup window is an explicit choice for this app, so it wins over
+        // ambient environment variables and the GitHub CLI.
+        var stored = this.tokenStore?.GetToken(ProviderKeys.Copilot);
+        if (!string.IsNullOrWhiteSpace(stored))
+        {
+            return stored.Trim();
+        }
+
         var environment = this.environment();
         foreach (var key in new[] { "GITHUB_TOKEN", "GH_TOKEN" })
         {

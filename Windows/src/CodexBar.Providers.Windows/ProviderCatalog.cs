@@ -1,3 +1,4 @@
+using CodexBar.Core.Credentials;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Providers.Antigravity;
 using CodexBar.Core.Providers.Claude;
@@ -14,7 +15,7 @@ namespace CodexBar.Providers.Windows;
 /// </summary>
 public static class ProviderCatalog
 {
-    public static ProviderRegistry Create(HttpClient httpClient)
+    public static ProviderRegistry Create(HttpClient httpClient, IProviderTokenStore? tokenStore = null)
     {
         ArgumentNullException.ThrowIfNull(httpClient);
 
@@ -23,7 +24,9 @@ public static class ProviderCatalog
             new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(httpClient)),
             new ClaudeProvider(new ClaudeAuthFileStore(), new ClaudeUsageClient(httpClient)),
             new GeminiProvider(new GeminiAuthFileStore(), new GeminiUsageClient(httpClient)),
-            new CopilotProvider(new CopilotTokenSource(), new CopilotUsageClient(httpClient)),
+            new CopilotProvider(
+                new CopilotTokenSource(tokenStore: tokenStore),
+                new CopilotUsageClient(httpClient)),
             new CursorProvider(new CursorSessionStore(), new CursorUsageClient(httpClient)),
             new AntigravityProvider(
                 new WindowsAntigravityProcessSource(),

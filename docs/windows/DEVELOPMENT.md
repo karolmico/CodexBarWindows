@@ -92,15 +92,44 @@ app/runtime/OS versions, settings shape, enabled provider keys, per-provider sta
 and last fetch timings — never accounts, messages, tokens, or paths. The flyout shows an inline
 confirmation; if the clipboard is unavailable it says so and points at the saved file.
 
+## Provider setup and saved tokens
+
+Settings (tray → Settings) and every failed provider card in the flyout link to **Provider setup…**.
+For the selected provider the window shows the exact CLI command, the credential file CodexBar
+reads, and **Check connection**, which refreshes only that provider
+(`UsageCoordinator.RefreshProviderAsync`) without re-hitting the others.
+
+The copy lives in `ProviderSetupCatalog` in `CodexBar.Core`, so the window, the CLI docs, and the
+tests cannot drift:
+
+| Provider | Sign-in | What CodexBar reads |
+| --- | --- | --- |
+| Codex | `codex login` | `%USERPROFILE%\.codex\auth.json`, or `%CODEX_HOME%\auth.json` when set |
+| Claude | `claude`, then `/login` | `%USERPROFILE%\.claude\.credentials.json`, or `%CLAUDE_CONFIG_DIR%` when set |
+| Gemini | `gemini` | `%USERPROFILE%\.gemini\oauth_creds.json` |
+| Copilot | `gh auth login`, or a saved token | saved token, then `GITHUB_TOKEN`/`GH_TOKEN`, then `gh auth token` |
+| Cursor | sign in to the Cursor app | `%APPDATA%\Cursor\User\globalStorage\state.vscdb`, then `%USERPROFILE%\.cursor\auth.json` |
+| Antigravity | sign in to Antigravity | its local language server; no token exists |
+
+Copilot is the only provider that accepts a token pasted into CodexBar, because it is the only
+provider whose API this app can call with one. The token is encrypted with Windows DPAPI
+(current-user scope), written atomically to `%APPDATA%\CodexBar\provider-credentials.dat`, and never
+stored in `settings.json`. The file holds no plain text; a corrupt, foreign, or undecryptable file
+behaves exactly like "no token saved", and the setup window can clear it. The tray and
+`codexbar.exe` read the same store, and the CLI reports `sign-in required` rather than
+`not configured` when a saved token is rejected. CodexBar never writes a provider's own credential
+file.
+
 ## Layout
 
 | Path | Purpose |
 | --- | --- |
 | `Windows/src/CodexBar.Core` | Platform-neutral domain: provider keys, rate windows, snapshots, fetch contracts, refresh policy, formatting, tray menu model, CLI shaping, diagnostics |
-| `Windows/src/CodexBar.Providers.Windows` | Concrete Windows provider catalog shared by the tray and the CLI (WMI + TCP table for Antigravity) |
+| `Windows/src/CodexBar.Providers.Windows` | Concrete Windows provider catalog shared by the tray and the CLI (WMI + TCP table for Antigravity, DPAPI token protection) |
 | `Windows/src/CodexBar.Windows` | WPF composition root: tray host, flyout, settings, notifications, clipboard |
 | `Windows/src/CodexBar.Cli` | `codexbar.exe` console host over the shared core |
 | `Windows/tests/CodexBar.Core.Tests` | xUnit tests for the core seams, including CLI golden files |
+| `Windows/tests/CodexBar.Providers.Windows.Tests` | DPAPI protection and encrypted token-store round-trip tests (Windows-only) |
 | `docs/windows/SPEC.md` | Product and technical specification |
 | `docs/windows/GLOSSARY.md` | Domain vocabulary |
 | `docs/windows/adr` | Architecture decision records |

@@ -38,6 +38,9 @@ public partial class FlyoutWindow : Window
 
     public event EventHandler? DiagnosticsRequested;
 
+    /// <summary>Raised with a provider key when the user asks to connect a provider that failed.</summary>
+    public event EventHandler<string>? ProviderSetupRequested;
+
     /// <summary>Inline confirmation for the copy action; no toast dependency, so it always shows.</summary>
     public void ShowDiagnosticsStatus(string message, bool isError)
     {
@@ -95,6 +98,19 @@ public partial class FlyoutWindow : Window
     {
         this.SettingsRequested?.Invoke(this, EventArgs.Empty);
         this.CloseOnce();
+    }
+
+    private void OnConfigureProvider(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: string key } || string.IsNullOrWhiteSpace(key))
+        {
+            return;
+        }
+
+        // Close first so the setup dialog is not opened behind a topmost flyout that then
+        // deactivates and fights it for focus.
+        this.CloseOnce();
+        this.ProviderSetupRequested?.Invoke(this, key);
     }
 
     private void OnCopyDiagnostics(object sender, RoutedEventArgs e) =>

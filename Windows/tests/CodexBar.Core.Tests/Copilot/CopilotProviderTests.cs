@@ -1,3 +1,4 @@
+using CodexBar.Core.Credentials;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Providers.Copilot;
 using CodexBar.Core.Tests.Support;
@@ -10,8 +11,9 @@ public sealed class CopilotTokenSourceTests
 {
     private static CopilotTokenSource Source(
         Dictionary<string, string> environment,
-        Func<CancellationToken, Task<string?>>? gitHubCli = null) =>
-        new(() => environment, gitHubCli ?? (_ => Task.FromResult<string?>(null)));
+        Func<CancellationToken, Task<string?>>? gitHubCli = null,
+        IProviderTokenStore? tokenStore = null) =>
+        new(() => environment, gitHubCli ?? (_ => Task.FromResult<string?>(null)), tokenStore);
 
     [Fact]
     public async Task Prefers_an_explicit_environment_token()
@@ -21,6 +23,39 @@ public sealed class CopilotTokenSourceTests
             _ => Task.FromResult<string?>("ghp_cli"));
 
         Assert.Equal("ghp_env", await source.ResolveAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_token_saved_in_codexbar_wins_over_environment_and_cli()
+    {
+        var store = new FakeTokenStore();
+        store.SaveToken(ProviderKeys.Copilot, "ghp_saved");
+        var source = Source(
+            new Dictionary<string, string> { ["GITHUB_TOKEN"] = "ghp_env" },
+            _ => Task.FromResult<string?>("ghp_cli"),
+            store);
+
+        Assert.Equal("ghp_saved", await source.ResolveAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task An_empty_saved_token_falls_back_to_the_environment()
+    {
+        var store = new FakeTokenStore();
+        store.SaveToken(ProviderKeys.Copilot, "   ");
+        var source = Source(new Dictionary<string, string> { ["GITHUB_TOKEN"] = "ghp_env" }, tokenStore: store);
+
+        Assert.Equal("ghp_env", await source.ResolveAsync(CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task A_saved_token_for_another_provider_is_ignored()
+    {
+        var store = new FakeTokenStore();
+        store.SaveToken(ProviderKeys.Claude, "not-a-github-token");
+        var source = Source(new Dictionary<string, string>(), tokenStore: store);
+
+        Assert.Null(await source.ResolveAsync(CancellationToken.None));
     }
 
     [Fact]
@@ -37,6 +72,18 @@ public sealed class CopilotTokenSourceTests
         var source = Source(new Dictionary<string, string>());
 
         Assert.Null(await source.ResolveAsync(CancellationToken.None));
+    }
+
+    private sealed class FakeTokenStore : IProviderTokenStore
+    {
+        private readonly Dictionary<ProviderKey, string> tokens = [];
+
+        public string? GetToken(ProviderKey provider) =>
+            this.tokens.TryGetValue(provider, out var token) ? token : null;
+
+        public void SaveToken(ProviderKey provider, string token) => this.tokens[provider] = token;
+
+        public void ClearToken(ProviderKey provider) => this.tokens.Remove(provider);
     }
 }
 

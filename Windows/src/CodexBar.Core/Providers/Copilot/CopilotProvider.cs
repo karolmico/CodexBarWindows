@@ -20,7 +20,7 @@ public sealed class CopilotProvider : IUsageProvider
         if (string.IsNullOrWhiteSpace(token))
         {
             return new UsageFetchResult.Failure(ProviderError.NotConfigured(
-                "GitHub token not found. Install the GitHub CLI and run `gh auth login`."));
+                "GitHub token not found. Run `gh auth login`, or save a token in CodexBar's provider setup."));
         }
 
         return await this.client.FetchAsync(token, cancellationToken).ConfigureAwait(false);

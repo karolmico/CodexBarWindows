@@ -177,6 +177,58 @@ public sealed class UsageCoordinatorTests
         });
     }
 
+    [Fact]
+    public async Task Refreshing_one_provider_leaves_the_others_untouched()
+    {
+        var codex = new ScriptedProvider(ProviderKeys.Codex, "Codex");
+        codex.WillReturn(ScriptedProvider.Ok(ProviderKeys.Codex, Now, session: 42d));
+        var claude = new ScriptedProvider(ProviderKeys.Claude, "Claude");
+        claude.WillReturn(ScriptedProvider.Ok(ProviderKeys.Claude, Now, session: 12d));
+        var coordinator = Coordinator(codex, claude);
+        var notifications = 0;
+        coordinator.Changed += (_, _) => notifications++;
+
+        await coordinator.RefreshProviderAsync(ProviderKeys.Codex, CancellationToken.None);
+
+        Assert.Equal(1, codex.Calls);
+        Assert.Equal(0, claude.Calls);
+        Assert.Equal(42d, coordinator.States[0].Snapshot!.Primary!.UsedPercent);
+        Assert.Null(coordinator.States[1].Snapshot);
+        Assert.Equal(1, notifications);
+    }
+
+    [Fact]
+    public async Task Refreshing_an_unregistered_provider_is_a_no_op()
+    {
+        var codex = new ScriptedProvider(ProviderKeys.Codex, "Codex");
+        codex.WillReturn(ScriptedProvider.Ok(ProviderKeys.Codex, Now));
+        var coordinator = Coordinator(codex);
+        var notifications = 0;
+        coordinator.Changed += (_, _) => notifications++;
+
+        await coordinator.RefreshProviderAsync(ProviderKey.Parse("future-provider"), CancellationToken.None);
+
+        Assert.Equal(0, codex.Calls);
+        Assert.Equal(0, notifications);
+    }
+
+    [Fact]
+    public async Task A_single_provider_refresh_reuses_a_full_refresh_that_is_already_running()
+    {
+        var provider = new ScriptedProvider(ProviderKeys.Codex, "Codex");
+        provider.WillReturn(ScriptedProvider.Ok(ProviderKeys.Codex, Now));
+        provider.BlockUntilReleased();
+        var coordinator = Coordinator(provider);
+
+        var full = coordinator.RefreshAsync(CancellationToken.None);
+        var single = coordinator.RefreshProviderAsync(ProviderKeys.Codex, CancellationToken.None);
+        provider.Release();
+        await Task.WhenAll(full, single);
+
+        Assert.Equal(1, provider.Calls);
+        Assert.NotNull(coordinator.States[0].Snapshot);
+    }
+
     private static UsageCoordinator Coordinator(params IUsageProvider[] providers) =>
         new(providers, new RefreshPolicy(), () => Now);
 

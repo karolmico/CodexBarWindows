@@ -77,6 +77,9 @@
                     Margin="0,0,8,0"
                     Click="OnCopyDiagnostics"
                     Visibility="Collapsed" />
+            <Button Content="Provider setup…"
+                    Margin="0,0,8,0"
+                    Click="OnProviderSetup" />
             <Button Content="Cancel" Width="96" IsCancel="True" Margin="0,0,8,0" />
             <Button Content="Save" Width="96" IsDefault="True" Click="OnSave" />
         </StackPanel>

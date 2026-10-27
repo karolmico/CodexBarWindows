@@ -49,6 +49,9 @@ public partial class SettingsWindow : Window
     /// <summary>Settings produced by Save; null when the user cancelled.</summary>
     public AppSettings? Result { get; private set; }
 
+    /// <summary>Raised when the user asks to connect providers; the composition root owns that dialog.</summary>
+    public event EventHandler? ProviderSetupRequested;
+
     private static IEnumerable<ProviderRow> BuildRows(
         AppSettings settings,
         IReadOnlyList<ProviderDescriptor> providers)
@@ -84,6 +87,9 @@ public partial class SettingsWindow : Window
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
+
+    private void OnProviderSetup(object sender, RoutedEventArgs e) =>
+        this.ProviderSetupRequested?.Invoke(this, EventArgs.Empty);
 
     private void Move(object sender, int offset)
     {

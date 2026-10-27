@@ -1,0 +1,215 @@
+<Window x:Class="CodexBar.Windows.ProviderSetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CodexBar Provider Setup"
+        Width="760"
+        Height="640"
+        MinWidth="700"
+        MinHeight="520"
+        ResizeMode="CanResize"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display">
+    <Window.Resources>
+        <Style x:Key="SectionHeading" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Margin" Value="0,16,0,6" />
+        </Style>
+        <Style x:Key="Muted" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#6B6B70" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style x:Key="Boxed" TargetType="Border">
+            <Setter Property="Background" Value="#F5F5F8" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+        <Style x:Key="ReadOnlyField" TargetType="TextBox">
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel>
+            <TextBlock Text="Provider setup" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="Connect a provider once. CodexBar reads the sign-in your CLI or app already saved, and only stores a token when you save one here."
+                       Margin="0,4,0,12"
+                       TextWrapping="Wrap"
+                       Foreground="#4A4A50" />
+        </StackPanel>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="190" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border Background="#FBFBFD" BorderBrush="#22000000" BorderThickness="1" CornerRadius="8" Padding="4">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Text="Providers"
+                               FontWeight="SemiBold"
+                               Margin="8,6,8,4" />
+                    <ListBox x:Name="ProviderList"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             SelectionChanged="OnProviderSelected">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding DisplayName}" Margin="4,2" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="1"
+                    Margin="12,0,0,0"
+                    Background="#FBFBFD"
+                    BorderBrush="#22000000"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <TextBlock x:Name="ProviderHeading" FontSize="17" FontWeight="SemiBold" />
+                        <TextBlock x:Name="ProviderSummary"
+                                   Margin="0,4,0,0"
+                                   TextWrapping="Wrap"
+                                   Foreground="#4A4A50" />
+
+                        <TextBlock Text="How to connect" Style="{StaticResource SectionHeading}" />
+                        <ItemsControl x:Name="StepsList">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <DockPanel Margin="0,0,0,5" LastChildFill="True">
+                                        <TextBlock Text="•" Margin="0,0,7,0" Foreground="#6B6B70" />
+                                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                                    </DockPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <StackPanel x:Name="CommandSection" Margin="0,10,0,0">
+                            <TextBlock Text="Command" Style="{StaticResource SectionHeading}" Margin="0,0,0,6" />
+                            <DockPanel LastChildFill="True">
+                                <Button x:Name="RunCommandButton"
+                                        DockPanel.Dock="Right"
+                                        Content="Run in terminal"
+                                        Width="112"
+                                        Margin="8,0,0,0"
+                                        Click="OnRunCommand"
+                                        ToolTip="Open a terminal with this command" />
+                                <Button x:Name="CopyCommandButton"
+                                        DockPanel.Dock="Right"
+                                        Content="Copy"
+                                        Width="66"
+                                        Margin="8,0,0,0"
+                                        Click="OnCopyCommand" />
+                                <Border Style="{StaticResource Boxed}">
+                                    <TextBox x:Name="CommandText"
+                                             Style="{StaticResource ReadOnlyField}"
+                                             AutomationProperties.Name="Sign-in command" />
+                                </Border>
+                            </DockPanel>
+                        </StackPanel>
+
+                        <StackPanel x:Name="PathSection" Margin="0,0,0,0">
+                            <TextBlock Text="Credential file" Style="{StaticResource SectionHeading}" Margin="0,0,0,6" />
+                            <Border Style="{StaticResource Boxed}">
+                                <TextBox x:Name="PathText"
+                                         Style="{StaticResource ReadOnlyField}"
+                                         AutomationProperties.Name="Credential file path"
+                                         TextWrapping="Wrap"
+                                         VerticalAlignment="Top" />
+                            </Border>
+                            <DockPanel Margin="0,6,0,0" LastChildFill="True">
+                                <Button x:Name="OpenFolderButton"
+                                        DockPanel.Dock="Right"
+                                        Content="Open folder"
+                                        Width="92"
+                                        Margin="8,0,0,0"
+                                        Click="OnOpenFolder" />
+                                <TextBlock x:Name="PathNoteText"
+                                           Style="{StaticResource Muted}"
+                                           TextWrapping="Wrap"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
+                        </StackPanel>
+
+                        <Border x:Name="TokenSection"
+                                Margin="0,14,0,0"
+                                Background="#F7F7FA"
+                                BorderBrush="#22000000"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Padding="12">
+                            <StackPanel>
+                                <TextBlock x:Name="TokenLabelText" FontWeight="SemiBold" />
+                                <TextBlock x:Name="TokenHintText"
+                                           Style="{StaticResource Muted}"
+                                           TextWrapping="Wrap"
+                                           Margin="0,3,0,8" />
+                                <PasswordBox x:Name="TokenBox"
+                                             Padding="6,4"
+                                             AutomationProperties.Name="Personal access token" />
+                                <DockPanel Margin="0,8,0,0" LastChildFill="False">
+                                    <Button x:Name="SaveTokenButton" Content="Save token" Width="96" Click="OnSaveToken" />
+                                    <Button x:Name="ClearTokenButton"
+                                            Content="Clear saved token"
+                                            Width="126"
+                                            Margin="8,0,0,0"
+                                            Click="OnClearToken" />
+                                </DockPanel>
+                                <TextBlock x:Name="TokenStateText"
+                                           Style="{StaticResource Muted}"
+                                           Margin="0,8,0,0"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                        </Border>
+
+                        <TextBlock Text="Connection" Style="{StaticResource SectionHeading}" />
+                        <TextBlock x:Name="StatusText"
+                                   TextWrapping="Wrap"
+                                   Foreground="#6B6B70" />
+                        <TextBlock x:Name="CheckedAtText"
+                                   Style="{StaticResource Muted}"
+                                   Margin="0,3,0,0" />
+
+                        <StackPanel Orientation="Horizontal" Margin="0,18,0,0">
+                            <Button x:Name="OpenHelpButton" Content="Open help page" Margin="0,0,8,0" Click="OnOpenHelp" />
+                            <Button x:Name="CheckButton" Content="Check connection" Click="OnCheckConnection" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <DockPanel Grid.Row="2" Margin="0,14,0,0" LastChildFill="False">
+            <TextBlock DockPanel.Dock="Left"
+                       MaxWidth="520"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"
+                       Style="{StaticResource Muted}"
+                       Text="Saved tokens are encrypted with Windows DPAPI for your Windows account. CodexBar never writes to a provider's own credential file." />
+            <Button DockPanel.Dock="Right"
+                    Content="Close"
+                    Width="96"
+                    IsCancel="True"
+                    Click="OnClose" />
+        </DockPanel>
+    </Grid>
+</Window>

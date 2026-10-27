@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using System.Reflection;
 using CodexBar.Core.Cli;
+using CodexBar.Core.Credentials;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Settings;
 using CodexBar.Providers.Windows;
@@ -39,11 +40,14 @@ internal static class Program
         }
 
         using var httpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
-        var registry = ProviderCatalog.Create(httpClient);
-
         var dataDirectory = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "CodexBar");
+        var tokenStore = new FileProviderTokenStore(
+            Path.Combine(dataDirectory, "provider-credentials.dat"),
+            new DpapiDataProtector());
+        var registry = ProviderCatalog.Create(httpClient, tokenStore);
+
         var settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));
         var settings = settingsStore.Load(
             AppSettings.DefaultFor(registry.All.Select(provider => provider.Descriptor))).Settings;
