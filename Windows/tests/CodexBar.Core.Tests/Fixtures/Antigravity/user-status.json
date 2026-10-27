@@ -1,0 +1,15 @@
+{
+  "userStatus": {
+    "email": "user@example.com",
+    "userTier": {
+      "id": "pro",
+      "name": "Pro"
+    },
+    "planStatus": {
+      "planInfo": {
+        "planName": "pro",
+        "planDisplayName": "Pro"
+      }
+    }
+  }
+}

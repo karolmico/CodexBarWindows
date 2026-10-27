@@ -9,6 +9,8 @@ internal sealed record CapturedRequest(
     string? Authorization,
     string? Cookie,
     string? UserAgent,
+    string? CsrfToken,
+    string? ConnectProtocolVersion,
     string Body);
 
 /// <summary>
@@ -54,8 +56,10 @@ internal sealed class RoutingHandler : HttpMessageHandler
             request.RequestUri!,
             request.Method,
             request.Headers.Authorization?.ToString(),
-            request.Headers.TryGetValues("Cookie", out var cookies) ? string.Join("; ", cookies) : null,
+            Header(request, "Cookie"),
             request.Headers.UserAgent.ToString(),
+            Header(request, "X-Codeium-Csrf-Token"),
+            Header(request, "Connect-Protocol-Version"),
             request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? string.Empty));
 
         var path = request.RequestUri!.AbsolutePath;
@@ -69,4 +73,7 @@ internal sealed class RoutingHandler : HttpMessageHandler
             Content = new StringContent($"{{\"error\":\"no stub for {path}\"}}", System.Text.Encoding.UTF8, "application/json"),
         });
     }
+
+    private static string? Header(HttpRequestMessage request, string name) =>
+        request.Headers.TryGetValues(name, out var values) ? string.Join(", ", values) : null;
 }

@@ -1,0 +1,38 @@
+{
+  "response": {
+    "description": "Antigravity quota",
+    "groups": [
+      {
+        "displayName": "Gemini Models",
+        "buckets": [
+          {
+            "bucketId": "gemini-5h",
+            "displayName": "5-hour",
+            "remainingFraction": 0.82,
+            "resetTime": "2026-10-27T17:00:00Z",
+            "window": "5h"
+          },
+          {
+            "bucketId": "gemini-weekly",
+            "displayName": "Weekly",
+            "remainingFraction": 0.42,
+            "resetTime": "2026-11-02T00:00:00Z",
+            "window": "weekly"
+          }
+        ]
+      },
+      {
+        "displayName": "Claude and GPT models",
+        "buckets": [
+          {
+            "bucketId": "claude-gpt-5h",
+            "displayName": "5-hour",
+            "remainingFraction": 0.6,
+            "resetTime": "2026-10-27T17:00:00Z",
+            "window": "5-hour"
+          }
+        ]
+      }
+    ]
+  }
+}

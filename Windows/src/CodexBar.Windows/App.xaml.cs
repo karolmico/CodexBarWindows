@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using CodexBar.Core.Persistence;
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
+using CodexBar.Core.Providers.Antigravity;
 using CodexBar.Core.Providers.Claude;
 using CodexBar.Core.Providers.Codex;
 using CodexBar.Core.Providers.Copilot;
@@ -52,6 +53,9 @@ public partial class App : Application
                 new CursorProvider(
                     new CursorSessionStore(),
                     new CursorUsageClient(this.httpClient)),
+                new AntigravityProvider(
+                    new Providers.WindowsAntigravityProcessSource(),
+                    new AntigravityUsageClient(this.httpClient)),
             ]);
 
             this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));

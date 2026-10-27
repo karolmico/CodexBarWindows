@@ -56,6 +56,17 @@ dotnet publish src/CodexBar.Windows -c Release -p:UseAppHost=true `
 | `docs/windows/adr` | Architecture decision records |
 | `.scratch/windows-port/issues` | Tracer-bullet tickets and blocking edges |
 
+## Provider dependencies
+
+| Package | Where | Why |
+| --- | --- | --- |
+| `Microsoft.Data.Sqlite` | `CodexBar.Core` | Read-only access to Cursor's `cursorAuth/accessToken` row |
+| `System.Management` | `CodexBar.Windows` | WMI command lines for Antigravity process discovery |
+| `H.NotifyIcon.Wpf` | `CodexBar.Windows` | Tray icon and native menu |
+
+Antigravity loopback ports come from `GetExtendedTcpTable` (IP helper) rather than a subprocess.
+
+
 ## Conventions
 
 - Tests assert observable behaviour at the agreed seams; no test reads real credentials,
