@@ -88,6 +88,24 @@ public sealed class FlyoutBuilderTests
     }
 
     [Fact]
+    public void Highlighted_provider_is_marked_for_the_toast_click_focus()
+    {
+        var snapshot = TestSnapshots.Codex(Now);
+
+        var model = FlyoutBuilder.Build(
+            [
+                new ProviderState(ProviderKeys.Codex, "Codex", snapshot),
+                new ProviderState(ProviderKeys.Claude, "Claude", TestSnapshots.Claude(Now)),
+            ],
+            Now,
+            isRefreshing: false,
+            highlightedKey: "claude");
+
+        Assert.False(model.Providers[0].IsHighlighted);
+        Assert.True(model.Providers[1].IsHighlighted);
+    }
+
+    [Fact]
     public void Refreshing_footer_wins_over_the_timestamp()
     {
         var snapshot = TestSnapshots.Codex(Now.AddMinutes(-2));

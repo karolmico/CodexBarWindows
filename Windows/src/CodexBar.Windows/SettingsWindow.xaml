@@ -2,13 +2,15 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="CodexBar Settings"
-        Width="460"
+        Width="480"
         SizeToContent="Height"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         ShowInTaskbar="False">
     <Grid Margin="18">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -51,7 +53,21 @@
         <TextBlock Grid.Row="2" Text="Minimum refresh interval (minutes, 1–60)" FontWeight="SemiBold" />
         <TextBox x:Name="RefreshFloorBox" Grid.Row="3" Width="80" HorizontalAlignment="Left" Margin="0,6,0,16" />
 
-        <StackPanel Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel Grid.Row="4" Margin="0,0,0,16">
+            <TextBlock Text="Notifications" FontWeight="SemiBold" Margin="0,0,0,6" />
+            <CheckBox x:Name="Threshold80Box" Content="Warn when a window reaches 80% used" Margin="0,2" />
+            <CheckBox x:Name="Threshold95Box" Content="Warn when a window reaches 95% used" Margin="0,2" />
+            <CheckBox x:Name="ResetNotificationsBox" Content="Notify when a window resets" Margin="0,2" />
+            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                <TextBlock Text="Quiet hours" VerticalAlignment="Center" />
+                <TextBox x:Name="QuietStartBox" Width="62" Margin="10,0,4,0" ToolTip="Start, e.g. 22:00" />
+                <TextBlock Text="–" VerticalAlignment="Center" Margin="0,0,4,0" />
+                <TextBox x:Name="QuietEndBox" Width="62" ToolTip="End, e.g. 07:00" />
+                <TextBlock Text="HH:mm, empty disables" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#6B6B70" />
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Width="96" IsCancel="True" Margin="0,0,8,0" />
             <Button Content="Save" Width="96" IsDefault="True" Click="OnSave" />
         </StackPanel>

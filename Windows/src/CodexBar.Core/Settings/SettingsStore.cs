@@ -88,7 +88,11 @@ public sealed class SettingsStore
             var settings = new AppSettings(
                 providers.Length == 0 ? defaults.Providers : providers,
                 TimeSpan.FromMinutes(document.RefreshFloorMinutes ?? defaults.RefreshFloor.TotalMinutes),
-                document.SchemaVersion);
+                document.SchemaVersion,
+                document.NotificationThresholds ?? defaults.NotificationThresholds,
+                document.NotifyResets ?? defaults.NotifyResets,
+                ParseTime(document.QuietHoursStart) ?? defaults.QuietHoursStart,
+                ParseTime(document.QuietHoursEnd) ?? defaults.QuietHoursEnd);
 
             return new SettingsLoadResult(settings, Warning: null);
         }
@@ -107,7 +111,11 @@ public sealed class SettingsStore
             settings.Providers.Select(static preference => new ProviderEntry(
                 preference.Key.Value,
                 preference.Enabled)).ToList(),
-            settings.RefreshFloor.TotalMinutes);
+            settings.RefreshFloor.TotalMinutes,
+            settings.NotificationThresholds.ToList(),
+            settings.NotifyResets,
+            FormatTime(settings.QuietHoursStart),
+            FormatTime(settings.QuietHoursEnd));
 
         this.writeAllText(this.path, JsonSerializer.Serialize(document, JsonOptions));
     }
@@ -136,6 +144,20 @@ public sealed class SettingsStore
     private static string? ReadFileOrNull(string path) =>
         File.Exists(path) ? File.ReadAllText(path) : null;
 
+    private static TimeOnly? ParseTime(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && TimeOnly.TryParseExact(
+            value.Trim(),
+            "HH:mm",
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.None,
+            out var parsed)
+            ? parsed
+            : null;
+
+    private static string? FormatTime(TimeOnly? value) =>
+        value?.ToString("HH:mm", CultureInfo.InvariantCulture);
+
     private static void WriteFileAtomically(string path, string content)
     {
         var directory = System.IO.Path.GetDirectoryName(path);
@@ -152,7 +174,11 @@ public sealed class SettingsStore
     private sealed record SettingsDocument(
         int SchemaVersion,
         List<ProviderEntry>? Providers,
-        double? RefreshFloorMinutes);
+        double? RefreshFloorMinutes,
+        List<int>? NotificationThresholds,
+        bool? NotifyResets,
+        string? QuietHoursStart,
+        string? QuietHoursEnd);
 
     private sealed record ProviderEntry(string? Key, bool Enabled);
 }

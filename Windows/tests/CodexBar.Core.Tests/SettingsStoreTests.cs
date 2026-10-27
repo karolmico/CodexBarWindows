@@ -130,6 +130,69 @@ public sealed class SettingsStoreTests
     }
 
     [Fact]
+    public void Notification_settings_round_trip()
+    {
+        var files = new Dictionary<string, string>();
+        var store = Store(files, out var written, () => Now);
+        var settings = new AppSettings(
+            notificationThresholds: [70, 90],
+            notifyResets: false,
+            quietHoursStart: new TimeOnly(22, 30),
+            quietHoursEnd: new TimeOnly(6, 15));
+
+        store.Save(settings);
+        var (path, content) = written.Single();
+        files[path] = content;
+        var loaded = store.Load(Defaults).Settings;
+
+        Assert.Equal([70, 90], loaded.NotificationThresholds);
+        Assert.False(loaded.NotifyResets);
+        Assert.True(loaded.HasQuietHours);
+        Assert.Equal(new TimeOnly(22, 30), loaded.QuietHoursStart);
+        Assert.Equal(new TimeOnly(6, 15), loaded.QuietHoursEnd);
+    }
+
+    [Fact]
+    public void Older_settings_file_keeps_notification_defaults()
+    {
+        var files = new Dictionary<string, string>
+        {
+            [@"C:\AppData\CodexBar\settings.json"] = """{"schemaVersion":1,"refreshFloorMinutes":4}""",
+        };
+        var store = Store(files, out _);
+
+        var settings = store.Load(Defaults).Settings;
+
+        Assert.Equal([80, 95], settings.NotificationThresholds);
+        Assert.True(settings.NotifyResets);
+        Assert.False(settings.HasQuietHours);
+    }
+
+    [Fact]
+    public void Invalid_quiet_hours_are_ignored_instead_of_breaking_the_file()
+    {
+        var files = new Dictionary<string, string>
+        {
+            [@"C:\AppData\CodexBar\settings.json"] =
+                """{"schemaVersion":1,"quietHoursStart":"25:99","quietHoursEnd":"07:00"}""",
+        };
+        var store = Store(files, out _);
+
+        var settings = store.Load(Defaults).Settings;
+
+        Assert.False(settings.HasQuietHours);
+        Assert.Null(settings.QuietHoursStart);
+    }
+
+    [Fact]
+    public void Thresholds_are_sorted_deduplicated_and_clamped()
+    {
+        var settings = new AppSettings(notificationThresholds: [95, 80, 95, 0, 120, 50]);
+
+        Assert.Equal([50, 80, 95], settings.NotificationThresholds);
+    }
+
+    [Fact]
     public void Defaults_enable_providers_by_their_descriptor()
     {
         var defaults = AppSettings.DefaultFor(

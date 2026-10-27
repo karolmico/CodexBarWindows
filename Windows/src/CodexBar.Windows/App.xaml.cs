@@ -2,6 +2,7 @@ using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
+using CodexBar.Core.Notifications;
 using CodexBar.Core.Persistence;
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
@@ -29,6 +30,7 @@ public partial class App : Application
     private Tray.TrayHost? trayHost;
     private FlyoutWindow? flyout;
     private SingleInstance? singleInstance;
+    private NotificationDecider notificationDecider = new();
     private bool hasReportedUnhandledError;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -223,6 +225,7 @@ public partial class App : Application
 
         this.Render();
         this.PersistSnapshots();
+        this.RaiseNotifications();
 
         var delay = this.coordinator.NextDelay();
         if (delay < this.settings.RefreshFloor)
@@ -248,6 +251,32 @@ public partial class App : Application
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             // Losing the cache only costs a slower first paint on the next launch.
+        }
+    }
+
+    /// <summary>
+    /// Turns fresh provider state into toasts. The decider keeps arming state, so a refresh that did not
+    /// cross a threshold stays silent; the cap keeps one noisy refresh from flooding the notification area.
+    /// </summary>
+    private void RaiseNotifications()
+    {
+        if (this.coordinator is null || this.trayHost is null || this.settings is null)
+        {
+            return;
+        }
+
+        var notifications = this.notificationDecider.Evaluate(
+            this.coordinator.States,
+            this.settings,
+            DateTimeOffset.Now);
+
+        foreach (var notification in notifications.Take(3))
+        {
+            this.trayHost.Notify(
+                notification.Title,
+                notification.Message,
+                notification.IsWarning,
+                notification.Provider.Value);
         }
     }
 
@@ -280,6 +309,7 @@ public partial class App : Application
         }
 
         this.settings = updated;
+        this.notificationDecider = new NotificationDecider();
         var cached = this.coordinator?.Snapshots ?? [];
         if (this.coordinator is not null)
         {
