@@ -6,6 +6,7 @@ using CodexBar.Core.Providers.Codex;
 using CodexBar.Core.Providers.Copilot;
 using CodexBar.Core.Providers.Cursor;
 using CodexBar.Core.Providers.Gemini;
+using CodexBar.Core.Providers.OpenCode;
 
 namespace CodexBar.Providers.Windows;
 
@@ -32,6 +33,11 @@ public static class ProviderCatalog
                 new WindowsAntigravityProcessSource(),
                 new AntigravityUsageClient(httpClient),
                 new AgyCliUsageClient(new WindowsAgyProcessRunner())),
+            new OpenCodeProvider(
+                new OpenCodeCredentialResolver(
+                    OpenCodeCliCredentialStore.ForCurrentUser(),
+                    tokenStore),
+                new OpenCodeUsageClient(httpClient)),
         ]);
     }
 }

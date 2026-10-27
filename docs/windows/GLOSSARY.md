@@ -93,3 +93,7 @@ The Antigravity CLI (`agy.exe`). Two roles: it owns the user's Antigravity sign-
 ## CLI fallback
 
 A provider source used only when the primary source cannot answer. For Antigravity, the `agy` print report is the fallback for a closed, untokened, or failing desktop app.
+
+## OpenCode credential
+
+A bearer token for the OpenCode usage API: either an API key, or the OAuth access token the OpenCode CLI saved in `opencode.db`. CodexBar reads it (or a DPAPI-encrypted override) and never writes it back.

@@ -55,4 +55,5 @@ public static class ProviderKeys
     public static readonly ProviderKey Gemini = ProviderKey.Parse("gemini");
     public static readonly ProviderKey Copilot = ProviderKey.Parse("copilot");
     public static readonly ProviderKey Antigravity = ProviderKey.Parse("antigravity");
+    public static readonly ProviderKey OpenCode = ProviderKey.Parse("opencode");
 }

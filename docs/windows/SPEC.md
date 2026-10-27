@@ -22,7 +22,7 @@ A Windows tray application, `CodexBar.Windows`, built on .NET 9 and WPF, that:
 - starts with Windows (opt-in) and enforces a single instance;
 - exposes the same data through `codexbar usage --format json` for scripting.
 
-Provider coverage is phased. The first release matches the six providers the Linux build exposes: `codex`, `claude`, `cursor`, `gemini`, `copilot`, `antigravity`. The architecture is provider-agnostic so further providers are additive.
+Provider coverage is phased. The first release matches the six providers the Linux build exposes: `codex`, `claude`, `cursor`, `gemini`, `copilot`, `antigravity`. `opencode` was added afterwards from the OpenCode Go usage API (ADR 0004). The architecture is provider-agnostic so further providers are additive.
 
 ## User Stories
 

@@ -59,11 +59,14 @@ public sealed class SettingsStoreTests
         files[path] = content;
         var loaded = store.Load(Defaults).Settings;
 
-        Assert.Equal(2, loaded.Providers.Count);
+        Assert.Equal(3, loaded.Providers.Count);
         Assert.Equal(ProviderKeys.Claude, loaded.Providers[0].Key);
         Assert.False(loaded.Providers[0].Enabled);
         Assert.Equal(ProviderKeys.Codex, loaded.Providers[1].Key);
         Assert.True(loaded.Providers[1].Enabled);
+        // A provider this build registers but the file predates is appended with its default state.
+        Assert.Equal(ProviderKeys.Gemini, loaded.Providers[2].Key);
+        Assert.False(loaded.Providers[2].Enabled);
         Assert.Equal(TimeSpan.FromMinutes(12), loaded.RefreshFloor);
     }
 

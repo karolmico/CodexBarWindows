@@ -164,6 +164,23 @@ public static class ProviderSetupCatalog
             command: "agy",
             helpUrl: "https://antigravity.google",
             helpLabel: "Open Antigravity"),
+        new(
+            ProviderKeys.OpenCode,
+            "OpenCode",
+            "CodexBar reads OpenCode Go subscription usage with an API key, or with the sign-in the OpenCode CLI already saved.",
+            [
+                "Easiest: run `opencode auth login` and finish the browser sign-in.",
+                "Or create an API key at opencode.ai/auth and paste it below.",
+                "Return here and choose Check connection.",
+            ],
+            command: "opencode auth login",
+            credentialsPath: @"%USERPROFILE%\.local\share\opencode\opencode.db",
+            pathNote: "With OPENCODE_DB set, the CLI keeps its credential store in that file instead.",
+            helpUrl: "https://opencode.ai/auth",
+            helpLabel: "OpenCode keys",
+            supportsPersonalAccessToken: true,
+            tokenLabel: "OpenCode API key",
+            tokenHint: "Stored encrypted for this Windows account. Leave it empty to use OPENCODE_API_KEY or the OpenCode CLI sign-in."),
     ];
 
     /// <summary>Every setup entry, in catalog order.</summary>

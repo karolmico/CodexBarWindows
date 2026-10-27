@@ -17,6 +17,7 @@ public sealed class ProviderSetupCatalogTests
             ProviderKeys.Copilot,
             ProviderKeys.Cursor,
             ProviderKeys.Antigravity,
+            ProviderKeys.OpenCode,
         ];
 
         Assert.Equal(keys, ProviderSetupCatalog.All.Select(setup => setup.Key));
@@ -62,18 +63,25 @@ public sealed class ProviderSetupCatalogTests
     }
 
     [Fact]
-    public void Copilot_is_the_only_provider_with_a_token_override()
+    public void Copilot_and_OpenCode_offer_a_token_override()
     {
         var withTokens = ProviderSetupCatalog.All
             .Where(setup => setup.SupportsPersonalAccessToken)
             .ToArray();
 
-        var copilot = Assert.Single(withTokens);
-        Assert.Equal(ProviderKeys.Copilot, copilot.Key);
+        Assert.Equal([ProviderKeys.Copilot, ProviderKeys.OpenCode], withTokens.Select(setup => setup.Key));
+
+        var copilot = withTokens[0];
         Assert.Equal("gh auth login", copilot.Command);
         Assert.Equal("https://github.com/settings/tokens", copilot.HelpUrl);
         Assert.False(string.IsNullOrWhiteSpace(copilot.TokenLabel));
         Assert.False(string.IsNullOrWhiteSpace(copilot.TokenHint));
+
+        var openCode = withTokens[1];
+        Assert.Equal("opencode auth login", openCode.Command);
+        Assert.Equal("https://opencode.ai/auth", openCode.HelpUrl);
+        Assert.False(string.IsNullOrWhiteSpace(openCode.TokenLabel));
+        Assert.False(string.IsNullOrWhiteSpace(openCode.TokenHint));
     }
 
     [Fact]

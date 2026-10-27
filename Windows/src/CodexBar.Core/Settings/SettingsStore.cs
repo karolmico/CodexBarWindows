@@ -86,7 +86,7 @@ public sealed class SettingsStore
                 .ToArray();
 
             var settings = new AppSettings(
-                providers.Length == 0 ? defaults.Providers : providers,
+                MergeWithDefaults(providers, defaults.Providers),
                 TimeSpan.FromMinutes(document.RefreshFloorMinutes ?? defaults.RefreshFloor.TotalMinutes),
                 document.SchemaVersion,
                 document.NotificationThresholds ?? defaults.NotificationThresholds,
@@ -145,6 +145,25 @@ public sealed class SettingsStore
 
     private static string? ReadFileOrNull(string path) =>
         File.Exists(path) ? File.ReadAllText(path) : null;
+
+    /// <summary>
+    /// Saved preferences win, but a provider this build registers and the file predates is appended
+    /// with its default enablement. Without this a new provider would stay invisible to anyone with
+    /// an existing settings file.
+    /// </summary>
+    private static IReadOnlyList<ProviderPreference> MergeWithDefaults(
+        IReadOnlyList<ProviderPreference> saved,
+        IReadOnlyList<ProviderPreference> defaults)
+    {
+        if (saved.Count == 0)
+        {
+            return defaults;
+        }
+
+        var known = saved.Select(static preference => preference.Key).ToHashSet();
+        var additions = defaults.Where(preference => !known.Contains(preference.Key)).ToArray();
+        return additions.Length == 0 ? saved : [.. saved, .. additions];
+    }
 
     private static TimeOnly? ParseTime(string? value) =>
         !string.IsNullOrWhiteSpace(value)

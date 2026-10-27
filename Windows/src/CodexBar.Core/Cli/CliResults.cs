@@ -77,6 +77,7 @@ public static class CliSources
             "copilot" => "gh-cli",
             "cursor" => "cursor-app",
             "antigravity" => "antigravity-app",
+            "opencode" => "opencode-api",
             _ => "auto",
         };
     }
