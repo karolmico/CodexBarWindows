@@ -1,0 +1,6 @@
+{
+  "email": "user@example.com",
+  "email_verified": true,
+  "name": "Test User",
+  "sub": "user_01TEST"
+}

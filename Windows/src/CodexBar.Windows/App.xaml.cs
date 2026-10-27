@@ -8,6 +8,7 @@ using CodexBar.Core.Providers;
 using CodexBar.Core.Providers.Claude;
 using CodexBar.Core.Providers.Codex;
 using CodexBar.Core.Providers.Copilot;
+using CodexBar.Core.Providers.Cursor;
 using CodexBar.Core.Providers.Gemini;
 using CodexBar.Core.Refresh;
 using CodexBar.Core.Settings;
@@ -48,6 +49,9 @@ public partial class App : Application
                 new CopilotProvider(
                     new CopilotTokenSource(),
                     new CopilotUsageClient(this.httpClient)),
+                new CursorProvider(
+                    new CursorSessionStore(),
+                    new CursorUsageClient(this.httpClient)),
             ]);
 
             this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));

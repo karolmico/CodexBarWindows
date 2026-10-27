@@ -7,6 +7,7 @@ internal sealed record CapturedRequest(
     Uri Uri,
     HttpMethod Method,
     string? Authorization,
+    string? Cookie,
     string? UserAgent,
     string Body);
 
@@ -23,11 +24,24 @@ internal sealed class RoutingHandler : HttpMessageHandler
 
     public List<CapturedRequest> Requests { get; } = [];
 
-    public RoutingHandler Add(string path, HttpStatusCode statusCode, string body)
+    public RoutingHandler Add(
+        string path,
+        HttpStatusCode statusCode,
+        string body,
+        TimeSpan? retryAfter = null)
     {
-        this.routes[path] = _ => new HttpResponseMessage(statusCode)
+        this.routes[path] = _ =>
         {
-            Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json"),
+            var response = new HttpResponseMessage(statusCode)
+            {
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json"),
+            };
+            if (retryAfter is { } delay)
+            {
+                response.Headers.RetryAfter = new System.Net.Http.Headers.RetryConditionHeaderValue(delay);
+            }
+
+            return response;
         };
         return this;
     }
@@ -40,6 +54,7 @@ internal sealed class RoutingHandler : HttpMessageHandler
             request.RequestUri!,
             request.Method,
             request.Headers.Authorization?.ToString(),
+            request.Headers.TryGetValues("Cookie", out var cookies) ? string.Join("; ", cookies) : null,
             request.Headers.UserAgent.ToString(),
             request.Content?.ReadAsStringAsync(cancellationToken).GetAwaiter().GetResult() ?? string.Empty));
 
