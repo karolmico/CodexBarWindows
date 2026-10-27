@@ -1,0 +1,5 @@
+{
+  "claudeAiOauth": {
+    "refreshToken": "test-claude-refresh"
+  }
+}

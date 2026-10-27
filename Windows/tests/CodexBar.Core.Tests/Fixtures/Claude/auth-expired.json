@@ -1,0 +1,7 @@
+{
+  "claudeAiOauth": {
+    "accessToken": "test-claude-token",
+    "refreshToken": "test-claude-refresh",
+    "expiresAt": 1700000000000
+  }
+}

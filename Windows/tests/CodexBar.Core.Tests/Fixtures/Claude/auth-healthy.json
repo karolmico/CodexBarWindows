@@ -1,0 +1,8 @@
+{
+  "claudeAiOauth": {
+    "accessToken": "test-claude-token",
+    "refreshToken": "test-claude-refresh",
+    "expiresAt": 1893456000000,
+    "scopes": ["user:profile", "user:inference"]
+  }
+}

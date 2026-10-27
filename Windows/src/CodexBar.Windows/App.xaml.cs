@@ -5,6 +5,7 @@ using System.Windows.Threading;
 using CodexBar.Core.Persistence;
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
+using CodexBar.Core.Providers.Claude;
 using CodexBar.Core.Providers.Codex;
 using CodexBar.Core.Refresh;
 using CodexBar.Core.Settings;
@@ -40,6 +41,7 @@ public partial class App : Application
             this.registry = new ProviderRegistry(
             [
                 new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(this.httpClient)),
+                new ClaudeProvider(new ClaudeAuthFileStore(), new ClaudeUsageClient(this.httpClient)),
             ]);
 
             this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));
