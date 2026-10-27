@@ -27,6 +27,8 @@ public partial class App : Application
     private AppSettings settings = null!;
     private UsageCoordinator? coordinator;
     private Tray.TrayHost? trayHost;
+    private FlyoutWindow? flyout;
+    private SingleInstance? singleInstance;
     private bool hasReportedUnhandledError;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -40,6 +42,18 @@ public partial class App : Application
             var dataDirectory = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
                 "CodexBar");
+
+            // A second launch hands the activation signal to the running instance and exits before
+            // creating any tray state.
+            this.singleInstance = SingleInstance.Acquire(
+                () => this.Dispatcher.BeginInvoke(new Action(() => this.ShowFlyout())));
+            if (!this.singleInstance.IsOwner)
+            {
+                this.singleInstance.Dispose();
+                this.singleInstance = null;
+                this.Shutdown();
+                return;
+            }
 
             // Provider catalog. New providers are added here; enablement and order come from settings.
             this.registry = new ProviderRegistry(
@@ -74,6 +88,7 @@ public partial class App : Application
             this.trayHost.ExitRequested += (_, _) => this.Shutdown();
             this.trayHost.RefreshRequested += (_, _) => _ = this.RefreshAsync();
             this.trayHost.SettingsRequested += (_, _) => this.ShowSettings();
+            this.trayHost.ShowFlyoutRequested += (_, providerKey) => this.ShowFlyout(providerKey);
             this.trayHost.Start();
 
             if (loaded.Warning is { } warning)
@@ -101,8 +116,12 @@ public partial class App : Application
         this.refreshTimer.Stop();
         this.shutdown.Cancel();
         this.shutdown.Dispose();
+        this.flyout?.Close();
+        this.flyout = null;
         this.trayHost?.Dispose();
         this.trayHost = null;
+        this.singleInstance?.Dispose();
+        this.singleInstance = null;
         this.httpClient.Dispose();
         base.OnExit(e);
     }
@@ -127,7 +146,57 @@ public partial class App : Application
                 this.coordinator.IsRefreshing,
                 settingsAvailable: true);
 
-    private void Render() => this.trayHost?.Render(this.BuildMenu());
+    private void Render()
+    {
+        this.trayHost?.Render(this.BuildMenu());
+        if (this.flyout is { IsVisible: true } open && this.coordinator is not null)
+        {
+            open.Update(FlyoutBuilder.Build(
+                this.coordinator.States,
+                DateTimeOffset.Now,
+                this.coordinator.IsRefreshing));
+        }
+    }
+
+    private void ShowFlyout(string? providerKey = null)
+    {
+        if (this.coordinator is null)
+        {
+            return;
+        }
+
+        var previous = this.flyout;
+        this.flyout = null;
+        if (previous is not null)
+        {
+            try
+            {
+                previous.Close();
+            }
+            catch (InvalidOperationException)
+            {
+                // Already tearing down; its Closed handler clears the field.
+            }
+        }
+
+        var window = new FlyoutWindow(FlyoutBuilder.Build(
+            this.coordinator.States,
+            DateTimeOffset.Now,
+            this.coordinator.IsRefreshing,
+            providerKey));
+        window.RefreshRequested += (_, _) => _ = this.RefreshAsync();
+        window.SettingsRequested += (_, _) => this.ShowSettings();
+        window.Closed += (_, _) =>
+        {
+            if (ReferenceEquals(this.flyout, window))
+            {
+                this.flyout = null;
+            }
+        };
+
+        window.ShowAtNotificationArea();
+        this.flyout = window;
+    }
 
     private void OnUsageChanged(object? sender, EventArgs e) =>
         this.Dispatcher.BeginInvoke(this.Render, DispatcherPriority.Background);

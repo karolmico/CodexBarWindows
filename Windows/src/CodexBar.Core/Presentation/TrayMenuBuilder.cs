@@ -204,13 +204,5 @@ public static class TrayMenuBuilder
         return snapshot.HighestUsedPercent ?? 0d;
     }
 
-    private static string ErrorLabel(ProviderError error) => error.Kind switch
-    {
-        ProviderErrorKind.NotConfigured => "not configured",
-        ProviderErrorKind.AuthenticationRequired => "sign-in required",
-        ProviderErrorKind.RateLimited => "rate limited",
-        ProviderErrorKind.Network => "offline",
-        ProviderErrorKind.Parse => "unreadable response",
-        _ => "error",
-    };
+    private static string ErrorLabel(ProviderError error) => ProviderStatusText.Label(error);
 }

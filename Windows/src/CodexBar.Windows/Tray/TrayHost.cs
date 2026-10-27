@@ -15,6 +15,7 @@ public sealed class TrayHost : IDisposable
     private readonly Func<TrayMenuModel> modelFactory;
     private readonly TaskbarIcon taskbarIcon;
     private Icon? icon;
+    private string? lastNotificationProviderKey;
     private bool disposed;
 
     public TrayHost(Func<TrayMenuModel> modelFactory)
@@ -23,9 +24,11 @@ public sealed class TrayHost : IDisposable
         this.taskbarIcon = new TaskbarIcon
         {
             ToolTipText = "CodexBar",
+            NoLeftClickDelay = true,
         };
         this.taskbarIcon.TrayContextMenuOpen += this.OnContextMenuOpen;
-        this.taskbarIcon.TrayLeftMouseDoubleClick += this.OnDoubleClick;
+        this.taskbarIcon.TrayLeftMouseUp += this.OnLeftMouseUp;
+        this.taskbarIcon.TrayBalloonTipClicked += this.OnBalloonTipClicked;
     }
 
     public event EventHandler? ExitRequested;
@@ -34,7 +37,10 @@ public sealed class TrayHost : IDisposable
 
     public event EventHandler? SettingsRequested;
 
-    public event EventHandler? ShowFlyoutRequested;
+    public event EventHandler<string?>? ShowFlyoutRequested;
+
+    /// <summary>A notification was clicked; the payload is the provider key it named, when any.</summary>
+    public event EventHandler<string?>? NotificationClicked;
 
     public void Start()
     {
@@ -44,9 +50,10 @@ public sealed class TrayHost : IDisposable
         this.Render(this.modelFactory());
     }
 
-    /// <summary>Shows a tray balloon; used for recoverable startup warnings.</summary>
-    public void Notify(string title, string message, bool isWarning)
+    /// <summary>Shows a tray notification; used for warnings and usage threshold alerts.</summary>
+    public void Notify(string title, string message, bool isWarning, string? providerKey = null)
     {
+        this.lastNotificationProviderKey = providerKey;
         this.taskbarIcon.ShowNotification(
             title,
             message,
@@ -71,7 +78,8 @@ public sealed class TrayHost : IDisposable
 
         this.disposed = true;
         this.taskbarIcon.TrayContextMenuOpen -= this.OnContextMenuOpen;
-        this.taskbarIcon.TrayLeftMouseDoubleClick -= this.OnDoubleClick;
+        this.taskbarIcon.TrayLeftMouseUp -= this.OnLeftMouseUp;
+        this.taskbarIcon.TrayBalloonTipClicked -= this.OnBalloonTipClicked;
         this.taskbarIcon.Dispose();
         this.icon?.Dispose();
     }
@@ -128,7 +136,7 @@ public sealed class TrayHost : IDisposable
             default:
                 if (id.StartsWith("provider:", StringComparison.Ordinal))
                 {
-                    this.ShowFlyoutRequested?.Invoke(this, EventArgs.Empty);
+                    this.ShowFlyoutRequested?.Invoke(this, id["provider:".Length..]);
                 }
 
                 break;
@@ -138,6 +146,12 @@ public sealed class TrayHost : IDisposable
     private void OnContextMenuOpen(object sender, System.Windows.RoutedEventArgs e) =>
         this.Render(this.modelFactory());
 
-    private void OnDoubleClick(object sender, System.Windows.RoutedEventArgs e) =>
-        this.ShowFlyoutRequested?.Invoke(this, EventArgs.Empty);
+    private void OnLeftMouseUp(object sender, System.Windows.RoutedEventArgs e) =>
+        this.ShowFlyoutRequested?.Invoke(this, null);
+
+    private void OnBalloonTipClicked(object sender, System.Windows.RoutedEventArgs e)
+    {
+        this.NotificationClicked?.Invoke(this, this.lastNotificationProviderKey);
+        this.ShowFlyoutRequested?.Invoke(this, this.lastNotificationProviderKey);
+    }
 }
