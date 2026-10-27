@@ -1,0 +1,11 @@
+{
+  "cloudaicompanionProject": "projects/123",
+  "currentTier": {
+    "id": "standard",
+    "name": "Standard"
+  },
+  "paidTier": {
+    "id": "g1-pro",
+    "name": "Gemini Code Assist"
+  }
+}

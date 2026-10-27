@@ -7,6 +7,8 @@ using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Providers.Claude;
 using CodexBar.Core.Providers.Codex;
+using CodexBar.Core.Providers.Copilot;
+using CodexBar.Core.Providers.Gemini;
 using CodexBar.Core.Refresh;
 using CodexBar.Core.Settings;
 
@@ -42,6 +44,10 @@ public partial class App : Application
             [
                 new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(this.httpClient)),
                 new ClaudeProvider(new ClaudeAuthFileStore(), new ClaudeUsageClient(this.httpClient)),
+                new GeminiProvider(new GeminiAuthFileStore(), new GeminiUsageClient(this.httpClient)),
+                new CopilotProvider(
+                    new CopilotTokenSource(),
+                    new CopilotUsageClient(this.httpClient)),
             ]);
 
             this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));
