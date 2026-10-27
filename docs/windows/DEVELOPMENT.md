@@ -34,15 +34,33 @@ memory-mapped file and fails with `IOException` on that filesystem. The Windows 
 therefore sets `UseAppHost=false`, which is transparent for `dotnet build`, `dotnet test`,
 and `dotnet run`.
 
-Packaging must build on a local disk or redirect the intermediate output:
+Packaging must build on a local disk. A single redirected `BaseIntermediateOutputPath` is not
+enough because it is shared by the referenced `CodexBar.Core` project, so publish from a local
+scratch copy instead:
 
 ```powershell
-$local = "$env:LOCALAPPDATA\CodexBar\publish\obj\"
-dotnet publish src/CodexBar.Windows -c Release -p:UseAppHost=true `
-  -p:BaseIntermediateOutputPath=$local -o "$env:LOCALAPPDATA\CodexBar\publish\app"
+$repo = (Get-Location).Path
+$work = "$env:LOCALAPPDATA\CodexBar\build\src"
+$out  = "$env:LOCALAPPDATA\CodexBar\publish\win-x64"
+robocopy $repo $work /E /XD .git bin obj .scratch TestResults /NFL /NDL /NJH /NJS
+dotnet publish "$work\Windows\src\CodexBar.Windows\CodexBar.Windows.csproj" `
+  -c Release -r win-x64 --self-contained true -p:UseAppHost=true -o $out
 ```
 
-`bin/`, `obj/`, and publish output are git-ignored.
+Install and uninstall per user, without elevation:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File packaging\install.ps1 -Source $out
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File "$env:LOCALAPPDATA\Programs\CodexBar\uninstall.ps1" [-RemoveSettings]
+```
+
+The installer writes only to `%LOCALAPPDATA%`, the per-user Start Menu, and `HKCU`. Autostart is
+owned by the app's Settings toggle, which writes/removes
+`HKCU\Software\Microsoft\Windows\CurrentVersion\Run\CodexBar` and passes `--autostart` so the
+launch stays invisible. Uninstall keeps `%APPDATA%\CodexBar` unless `-RemoveSettings` is passed.
+
+`bin/`, `obj/`, `publish/`, and `dist/` are git-ignored.
 
 ## Layout
 

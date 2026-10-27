@@ -50,6 +50,7 @@ obj/
 .vs/
 artifacts/
 publish/
+dist/
 TestResults/
 
 # Swift Package Manager metadata (leave sources tracked)

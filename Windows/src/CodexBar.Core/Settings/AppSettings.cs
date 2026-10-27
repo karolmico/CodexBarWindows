@@ -31,7 +31,8 @@ public sealed record AppSettings
         IEnumerable<int>? notificationThresholds = null,
         bool notifyResets = true,
         TimeOnly? quietHoursStart = null,
-        TimeOnly? quietHoursEnd = null)
+        TimeOnly? quietHoursEnd = null,
+        bool startWithWindows = false)
     {
         this.Providers = (providers ?? []).ToArray();
         this.RefreshFloor = ClampFloor(refreshFloor ?? TimeSpan.FromMinutes(MinRefreshFloorMinutes));
@@ -40,6 +41,7 @@ public sealed record AppSettings
         this.NotifyResets = notifyResets;
         this.QuietHoursStart = quietHoursStart;
         this.QuietHoursEnd = quietHoursEnd;
+        this.StartWithWindows = startWithWindows;
     }
 
     public int SchemaVersion { get; }
@@ -59,6 +61,9 @@ public sealed record AppSettings
     public TimeOnly? QuietHoursStart { get; }
 
     public TimeOnly? QuietHoursEnd { get; }
+
+    /// <summary>Opt-in per-user Run entry so CodexBar starts with Windows.</summary>
+    public bool StartWithWindows { get; }
 
     /// <summary>Quiet hours need both ends; identical ends mean "always quiet" is treated as disabled.</summary>
     public bool HasQuietHours =>

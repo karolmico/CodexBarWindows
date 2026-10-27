@@ -12,7 +12,7 @@
 - [x] Exit removes the icon and ends the process; no orphan process remains
 - [x] The icon renders acceptably on both light and dark taskbars (9 frames, 16–256 px; pixel analysis shows both dark and light strokes)
 - [x] A second launch does not create a second icon
-- [ ] The built executable runs from a clean `dotnet publish` output (tracked by ticket 11)
+- [x] The built executable runs from a clean `dotnet publish` output (verified in ticket 11)
 
 ## Further notes
 

@@ -138,7 +138,8 @@ public sealed class SettingsStoreTests
             notificationThresholds: [70, 90],
             notifyResets: false,
             quietHoursStart: new TimeOnly(22, 30),
-            quietHoursEnd: new TimeOnly(6, 15));
+            quietHoursEnd: new TimeOnly(6, 15),
+            startWithWindows: true);
 
         store.Save(settings);
         var (path, content) = written.Single();
@@ -150,6 +151,7 @@ public sealed class SettingsStoreTests
         Assert.True(loaded.HasQuietHours);
         Assert.Equal(new TimeOnly(22, 30), loaded.QuietHoursStart);
         Assert.Equal(new TimeOnly(6, 15), loaded.QuietHoursEnd);
+        Assert.True(loaded.StartWithWindows);
     }
 
     [Fact]

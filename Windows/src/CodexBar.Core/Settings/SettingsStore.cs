@@ -92,7 +92,8 @@ public sealed class SettingsStore
                 document.NotificationThresholds ?? defaults.NotificationThresholds,
                 document.NotifyResets ?? defaults.NotifyResets,
                 ParseTime(document.QuietHoursStart) ?? defaults.QuietHoursStart,
-                ParseTime(document.QuietHoursEnd) ?? defaults.QuietHoursEnd);
+                ParseTime(document.QuietHoursEnd) ?? defaults.QuietHoursEnd,
+                document.StartWithWindows ?? defaults.StartWithWindows);
 
             return new SettingsLoadResult(settings, Warning: null);
         }
@@ -115,7 +116,8 @@ public sealed class SettingsStore
             settings.NotificationThresholds.ToList(),
             settings.NotifyResets,
             FormatTime(settings.QuietHoursStart),
-            FormatTime(settings.QuietHoursEnd));
+            FormatTime(settings.QuietHoursEnd),
+            settings.StartWithWindows);
 
         this.writeAllText(this.path, JsonSerializer.Serialize(document, JsonOptions));
     }
@@ -178,7 +180,8 @@ public sealed class SettingsStore
         List<int>? NotificationThresholds,
         bool? NotifyResets,
         string? QuietHoursStart,
-        string? QuietHoursEnd);
+        string? QuietHoursEnd,
+        bool? StartWithWindows);
 
     private sealed record ProviderEntry(string? Key, bool Enabled);
 }

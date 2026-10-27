@@ -7,6 +7,11 @@
     <AssemblyName>CodexBar.Windows</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\CodexBar.ico</ApplicationIcon>
+    <Version>0.1.0</Version>
+    <Product>CodexBar</Product>
+    <AssemblyTitle>CodexBar</AssemblyTitle>
+    <Company>CodexBar</Company>
+    <Description>Ambient AI subscription usage in the Windows notification area.</Description>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>false</SelfContained>
     <!--

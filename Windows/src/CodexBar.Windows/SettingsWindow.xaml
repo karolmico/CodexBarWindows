@@ -65,6 +65,10 @@
                 <TextBox x:Name="QuietEndBox" Width="62" ToolTip="End, e.g. 07:00" />
                 <TextBlock Text="HH:mm, empty disables" Margin="10,0,0,0" VerticalAlignment="Center" Foreground="#6B6B70" />
             </StackPanel>
+
+            <TextBlock Text="Startup" FontWeight="SemiBold" Margin="0,14,0,6" />
+            <CheckBox x:Name="StartWithWindowsBox"
+                      Content="Start CodexBar with Windows (per-user, no elevation)" />
         </StackPanel>
 
         <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">

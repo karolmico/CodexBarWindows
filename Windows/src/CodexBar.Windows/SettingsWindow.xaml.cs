@@ -36,6 +36,7 @@ public partial class SettingsWindow : Window
         this.ResetNotificationsBox.IsChecked = settings.NotifyResets;
         this.QuietStartBox.Text = settings.QuietHoursStart?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
         this.QuietEndBox.Text = settings.QuietHoursEnd?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
+        this.StartWithWindowsBox.IsChecked = settings.StartWithWindows;
     }
 
     /// <summary>Settings produced by Save; null when the user cancelled.</summary>
@@ -129,7 +130,8 @@ public partial class SettingsWindow : Window
             notificationThresholds: thresholds,
             notifyResets: this.ResetNotificationsBox.IsChecked == true,
             quietHoursStart: quietStart,
-            quietHoursEnd: quietEnd);
+            quietHoursEnd: quietEnd,
+            startWithWindows: this.StartWithWindowsBox.IsChecked == true);
 
         this.DialogResult = true;
     }

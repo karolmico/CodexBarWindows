@@ -31,6 +31,7 @@ public partial class App : Application
     private FlyoutWindow? flyout;
     private SingleInstance? singleInstance;
     private NotificationDecider notificationDecider = new();
+    private bool isAutostartLaunch;
     private bool hasReportedUnhandledError;
 
     protected override void OnStartup(StartupEventArgs e)
@@ -38,6 +39,8 @@ public partial class App : Application
         base.OnStartup(e);
 
         this.DispatcherUnhandledException += this.OnDispatcherUnhandledException;
+        this.isAutostartLaunch = e.Args.Any(static argument =>
+            string.Equals(argument, "--autostart", StringComparison.OrdinalIgnoreCase));
 
         try
         {
@@ -80,6 +83,7 @@ public partial class App : Application
             var loaded = this.settingsStore.Load(
                 AppSettings.DefaultFor(this.registry.All.Select(provider => provider.Descriptor)));
             this.settings = loaded.Settings;
+            AutostartRegistration.Apply(this.settings.StartWithWindows);
 
             this.coordinator = this.CreateCoordinator(this.settings);
             this.coordinator.ApplyCached(this.snapshotCache.Load());
@@ -98,7 +102,16 @@ public partial class App : Application
                 this.trayHost.Notify("CodexBar settings", warning, isWarning: true);
             }
 
-            _ = this.RefreshAsync();
+            // An autostart launch stays invisible and gives Windows a few seconds to finish signing in.
+            if (this.isAutostartLaunch)
+            {
+                this.refreshTimer.Interval = TimeSpan.FromSeconds(4);
+                this.refreshTimer.Start();
+            }
+            else
+            {
+                _ = this.RefreshAsync();
+            }
         }
         catch (Exception exception)
         {
@@ -310,6 +323,7 @@ public partial class App : Application
 
         this.settings = updated;
         this.notificationDecider = new NotificationDecider();
+        AutostartRegistration.Apply(updated.StartWithWindows);
         var cached = this.coordinator?.Snapshots ?? [];
         if (this.coordinator is not null)
         {
