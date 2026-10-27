@@ -44,6 +44,15 @@ public sealed class TrayHost : IDisposable
         this.Render(this.modelFactory());
     }
 
+    /// <summary>Shows a tray balloon; used for recoverable startup warnings.</summary>
+    public void Notify(string title, string message, bool isWarning)
+    {
+        this.taskbarIcon.ShowNotification(
+            title,
+            message,
+            isWarning ? H.NotifyIcon.Core.NotificationIcon.Warning : H.NotifyIcon.Core.NotificationIcon.Info);
+    }
+
     /// <summary>Re-renders tooltip and menu from the current model, e.g. after a refresh completes.</summary>
     public void Render(TrayMenuModel model)
     {

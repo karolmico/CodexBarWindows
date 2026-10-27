@@ -1,5 +1,6 @@
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
+using CodexBar.Core.Usage;
 
 namespace CodexBar.Core.Refresh;
 
@@ -65,6 +66,38 @@ public sealed class UsageCoordinator
             return task;
         }
     }
+
+    /// <summary>Seeds the last good snapshots loaded from the cache; a failed first refresh keeps showing them.</summary>
+    public void ApplyCached(IEnumerable<UsageSnapshot> snapshots)
+    {
+        ArgumentNullException.ThrowIfNull(snapshots);
+
+        var applied = false;
+        foreach (var snapshot in snapshots)
+        {
+            if (snapshot is null || !this.entries.TryGetValue(snapshot.Provider, out var entry))
+            {
+                continue;
+            }
+
+            entry.Snapshot = snapshot;
+            entry.Error = null;
+            entry.Failures = 0;
+            applied = true;
+        }
+
+        if (applied)
+        {
+            this.Changed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    /// <summary>Snapshots currently worth persisting; providers without data are omitted.</summary>
+    public IReadOnlyList<UsageSnapshot> Snapshots =>
+        this.providers
+            .Select(provider => this.entries[provider.Descriptor.Key].Snapshot)
+            .OfType<UsageSnapshot>()
+            .ToArray();
 
     /// <summary>Shortest wait any provider needs before its next fetch.</summary>
     public TimeSpan NextDelay()

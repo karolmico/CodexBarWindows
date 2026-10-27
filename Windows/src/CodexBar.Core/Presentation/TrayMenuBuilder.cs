@@ -82,10 +82,12 @@ public static class TrayMenuBuilder
         IReadOnlyList<ProviderState> providers,
         DateTimeOffset now,
         bool isRefreshing,
-        bool settingsAvailable = false)
+        bool settingsAvailable = false,
+        TimeSpan? staleAfter = null)
     {
         ArgumentNullException.ThrowIfNull(providers);
 
+        var staleThreshold = staleAfter ?? TimeSpan.FromMinutes(30);
         var entries = new List<TrayMenuEntry>();
         var hasData = providers.Any(static provider => provider.Snapshot is not null);
 
@@ -100,7 +102,7 @@ public static class TrayMenuBuilder
                 var provider = providers[index];
                 entries.Add(TrayMenuEntry.Item(
                     $"provider:{provider.Key.Value}",
-                    DescribeProvider(provider, now)));
+                    DescribeProvider(provider, now, staleThreshold)));
             }
         }
 
@@ -148,7 +150,7 @@ public static class TrayMenuBuilder
             : string.Concat(toolTip.AsSpan(0, MaxToolTipLength - 1), "…");
     }
 
-    private static string DescribeProvider(ProviderState provider, DateTimeOffset now)
+    private static string DescribeProvider(ProviderState provider, DateTimeOffset now, TimeSpan staleThreshold)
     {
         if (provider.Snapshot is null)
         {
@@ -158,6 +160,12 @@ public static class TrayMenuBuilder
         }
 
         var line = ProviderUsageLine(provider.Snapshot, now);
+        var age = now - provider.Snapshot.UpdatedAt;
+        if (age > staleThreshold)
+        {
+            line = $"{line} · cached {UsageFormatter.FormatCountdown(age)} ago";
+        }
+
         return provider.Error is null
             ? $"{provider.DisplayName} — {line}"
             : $"{provider.DisplayName} — {line} ({ErrorLabel(provider.Error)})";

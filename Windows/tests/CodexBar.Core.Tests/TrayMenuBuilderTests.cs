@@ -151,6 +151,32 @@ public sealed class TrayMenuBuilderTests
     }
 
     [Fact]
+    public void Cached_snapshot_older_than_the_threshold_is_marked_with_its_age()
+    {
+        var providers = new[]
+        {
+            new ProviderState(ProviderKeys.Codex, "Codex", TestSnapshots.Codex(Now.AddHours(-2), 42d, 87d)),
+        };
+
+        var model = TrayMenuBuilder.Build(providers, Now, isRefreshing: false);
+
+        Assert.Equal("Codex — 42% · resets in 1h · cached 2h ago", model.Entries[0].Label);
+    }
+
+    [Fact]
+    public void Fresh_snapshot_is_not_marked_as_cached()
+    {
+        var providers = new[]
+        {
+            new ProviderState(ProviderKeys.Codex, "Codex", TestSnapshots.Codex(Now.AddMinutes(-1), 42d, 87d)),
+        };
+
+        var model = TrayMenuBuilder.Build(providers, Now, isRefreshing: false);
+
+        Assert.DoesNotContain("cached", model.Entries[0].Label, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void Weekly_only_snapshot_is_labelled_as_weekly()
     {
         var snapshot = new UsageSnapshot(ProviderKeys.Claude, Now, secondary: new RateWindow(63d, resetsAt: Now.AddDays(3)));

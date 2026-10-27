@@ -1,10 +1,13 @@
+using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
+using CodexBar.Core.Persistence;
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Providers.Codex;
 using CodexBar.Core.Refresh;
+using CodexBar.Core.Settings;
 
 namespace CodexBar.Windows;
 
@@ -13,6 +16,10 @@ public partial class App : Application
     private readonly HttpClient httpClient = new() { Timeout = TimeSpan.FromSeconds(20) };
     private readonly DispatcherTimer refreshTimer = new(DispatcherPriority.Background);
     private readonly CancellationTokenSource shutdown = new();
+    private ProviderRegistry registry = null!;
+    private SettingsStore settingsStore = null!;
+    private SnapshotCache snapshotCache = null!;
+    private AppSettings settings = null!;
     private UsageCoordinator? coordinator;
     private Tray.TrayHost? trayHost;
     private bool hasReportedUnhandledError;
@@ -25,16 +32,38 @@ public partial class App : Application
 
         try
         {
-            var codex = new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(this.httpClient));
-            this.coordinator = new UsageCoordinator([codex], new RefreshPolicy(), () => DateTimeOffset.Now);
-            this.coordinator.Changed += this.OnUsageChanged;
+            var dataDirectory = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "CodexBar");
+
+            // Provider catalog. New providers are added here; enablement and order come from settings.
+            this.registry = new ProviderRegistry(
+            [
+                new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(this.httpClient)),
+            ]);
+
+            this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));
+            this.snapshotCache = new SnapshotCache(Path.Combine(dataDirectory, "snapshots.json"));
+
+            var loaded = this.settingsStore.Load(
+                AppSettings.DefaultFor(this.registry.All.Select(provider => provider.Descriptor)));
+            this.settings = loaded.Settings;
+
+            this.coordinator = this.CreateCoordinator(this.settings);
+            this.coordinator.ApplyCached(this.snapshotCache.Load());
 
             this.refreshTimer.Tick += this.OnRefreshTimerTick;
 
             this.trayHost = new Tray.TrayHost(this.BuildMenu);
             this.trayHost.ExitRequested += (_, _) => this.Shutdown();
             this.trayHost.RefreshRequested += (_, _) => _ = this.RefreshAsync();
+            this.trayHost.SettingsRequested += (_, _) => this.ShowSettings();
             this.trayHost.Start();
+
+            if (loaded.Warning is { } warning)
+            {
+                this.trayHost.Notify("CodexBar settings", warning, isWarning: true);
+            }
 
             _ = this.RefreshAsync();
         }
@@ -62,6 +91,17 @@ public partial class App : Application
         base.OnExit(e);
     }
 
+    private UsageCoordinator CreateCoordinator(AppSettings currentSettings)
+    {
+        var coordinator = new UsageCoordinator(
+            this.registry.Resolve(currentSettings.EnabledProviderKeys),
+            new RefreshPolicy(),
+            () => DateTimeOffset.Now);
+
+        coordinator.Changed += this.OnUsageChanged;
+        return coordinator;
+    }
+
     private TrayMenuModel BuildMenu() =>
         this.coordinator is null
             ? TrayMenuBuilder.Build([], DateTimeOffset.Now, isRefreshing: false)
@@ -69,7 +109,7 @@ public partial class App : Application
                 this.coordinator.States,
                 DateTimeOffset.Now,
                 this.coordinator.IsRefreshing,
-                settingsAvailable: false);
+                settingsAvailable: true);
 
     private void Render() => this.trayHost?.Render(this.BuildMenu());
 
@@ -97,10 +137,74 @@ public partial class App : Application
         }
 
         this.Render();
+        this.PersistSnapshots();
 
         var delay = this.coordinator.NextDelay();
-        this.refreshTimer.Interval = delay < TimeSpan.FromSeconds(1) ? TimeSpan.FromSeconds(1) : delay;
+        if (delay < this.settings.RefreshFloor)
+        {
+            delay = this.settings.RefreshFloor;
+        }
+
+        this.refreshTimer.Interval = delay;
         this.refreshTimer.Start();
+    }
+
+    private void PersistSnapshots()
+    {
+        if (this.coordinator is null)
+        {
+            return;
+        }
+
+        try
+        {
+            this.snapshotCache.Save(this.coordinator.Snapshots);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Losing the cache only costs a slower first paint on the next launch.
+        }
+    }
+
+    private void ShowSettings()
+    {
+        var window = new SettingsWindow(
+            this.settings,
+            this.registry.All.Select(provider => provider.Descriptor).ToArray())
+        {
+            Owner = null,
+        };
+
+        if (window.ShowDialog() != true || window.Result is not { } updated)
+        {
+            return;
+        }
+
+        try
+        {
+            this.settingsStore.Save(updated);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(
+                $"Settings could not be saved.\n\n{exception.Message}",
+                "CodexBar",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+            return;
+        }
+
+        this.settings = updated;
+        var cached = this.coordinator?.Snapshots ?? [];
+        if (this.coordinator is not null)
+        {
+            this.coordinator.Changed -= this.OnUsageChanged;
+        }
+
+        this.coordinator = this.CreateCoordinator(updated);
+        this.coordinator.ApplyCached(cached);
+        this.Render();
+        _ = this.RefreshAsync();
     }
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)

@@ -115,6 +115,34 @@ public sealed class UsageCoordinatorTests
         Assert.Equal(2, notifications);
     }
 
+    [Fact]
+    public void Cached_snapshots_are_shown_immediately_and_schedule_a_refresh()
+    {
+        var provider = new ScriptedProvider(ProviderKeys.Codex, "Codex");
+        provider.WillReturn(ScriptedProvider.Ok(ProviderKeys.Codex, Now, session: 42d));
+        var coordinator = Coordinator(provider);
+        var cached = TestSnapshots.Codex(Now.AddHours(-2), session: 35d);
+
+        coordinator.ApplyCached([cached]);
+
+        Assert.Equal(35d, coordinator.States[0].Snapshot!.Primary!.UsedPercent);
+        Assert.Null(coordinator.States[0].Error);
+        Assert.Equal(TimeSpan.Zero, coordinator.NextDelay());
+        Assert.Single(coordinator.Snapshots);
+    }
+
+    [Fact]
+    public void Cached_snapshots_for_unregistered_providers_are_ignored()
+    {
+        var provider = new ScriptedProvider(ProviderKeys.Codex, "Codex");
+        var coordinator = Coordinator(provider);
+
+        coordinator.ApplyCached([TestSnapshots.Claude(Now.AddHours(-1), 10d)]);
+
+        Assert.Null(coordinator.States[0].Snapshot);
+        Assert.Empty(coordinator.Snapshots);
+    }
+
     private static UsageCoordinator Coordinator(params IUsageProvider[] providers) =>
         new(providers, new RefreshPolicy(), () => Now);
 }
