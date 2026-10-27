@@ -44,6 +44,7 @@ public partial class SettingsWindow : Window
         this.QuietStartBox.Text = settings.QuietHoursStart?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
         this.QuietEndBox.Text = settings.QuietHoursEnd?.ToString("HH:mm", CultureInfo.InvariantCulture) ?? string.Empty;
         this.StartWithWindowsBox.IsChecked = settings.StartWithWindows;
+        this.ThemeBox.SelectedValue = settings.Theme.ToString();
     }
 
     /// <summary>Settings produced by Save; null when the user cancelled.</summary>
@@ -159,7 +160,10 @@ public partial class SettingsWindow : Window
             notifyResets: this.ResetNotificationsBox.IsChecked == true,
             quietHoursStart: quietStart,
             quietHoursEnd: quietEnd,
-            startWithWindows: this.StartWithWindowsBox.IsChecked == true);
+            startWithWindows: this.StartWithWindowsBox.IsChecked == true,
+            theme: Enum.TryParse<AppTheme>(this.ThemeBox.SelectedValue as string, ignoreCase: true, out var theme)
+                ? theme
+                : AppTheme.System);
 
         this.DialogResult = true;
     }

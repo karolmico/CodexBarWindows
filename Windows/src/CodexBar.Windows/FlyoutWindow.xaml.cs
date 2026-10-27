@@ -69,11 +69,16 @@ public partial class FlyoutWindow : Window
     }
 
     /// <summary>
-    /// Shows the flyout just above the taskbar, horizontally near the mouse pointer. The window is
-    /// laid out at zero opacity first so its natural height is known before it is placed.
+    /// Shows the flyout just above the taskbar, horizontally near the mouse pointer. Height is first
+    /// measured at the fixed width and clamped to the work area, so the window grows to its content and
+    /// only the detail pane scrolls when the content really cannot fit.
     /// </summary>
     public void ShowAtNotificationArea()
     {
+        // Cap the height to the work area; SizeToContent grows the window to its content and the
+        // star-row ScrollViewer scrolls only once that cap is reached.
+        this.MaxHeight = Math.Max(220d, SystemParameters.WorkArea.Height - (ScreenMargin * 2));
+
         this.Opacity = 0;
         this.Show();
         this.UpdateLayout();

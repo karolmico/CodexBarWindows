@@ -81,6 +81,7 @@ public partial class App : Application
                 AppSettings.DefaultFor(this.registry.All.Select(provider => provider.Descriptor)));
             this.settings = loaded.Settings;
             AutostartRegistration.Apply(this.settings.StartWithWindows);
+            ThemeManager.Apply(this.settings.Theme);
 
             this.coordinator = this.CreateCoordinator(this.settings);
             this.coordinator.ApplyCached(this.snapshotCache.Load());
@@ -400,6 +401,7 @@ public partial class App : Application
         }
 
         this.settings = updated;
+        ThemeManager.Apply(updated.Theme);
         this.notificationDecider = new NotificationDecider();
         AutostartRegistration.Apply(updated.StartWithWindows);
         var cached = this.coordinator?.Snapshots ?? [];

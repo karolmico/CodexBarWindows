@@ -43,6 +43,21 @@ public sealed class SettingsStoreTests
     }
 
     [Fact]
+    public void Theme_round_trips_and_defaults_to_system()
+    {
+        var files = new Dictionary<string, string>();
+        var store = Store(files, out var written);
+
+        store.Save(new AppSettings(theme: AppTheme.Dark));
+        files[written.Single().Path] = written.Single().Content;
+        Assert.Equal(AppTheme.Dark, store.Load(Defaults).Settings.Theme);
+
+        // A saved file that predates the theme key keeps the default.
+        var older = Store([], out _);
+        Assert.Equal(AppTheme.System, older.Load(Defaults).Settings.Theme);
+    }
+
+    [Fact]
     public void Settings_round_trip_order_enablement_and_refresh_floor()
     {
         var files = new Dictionary<string, string>();

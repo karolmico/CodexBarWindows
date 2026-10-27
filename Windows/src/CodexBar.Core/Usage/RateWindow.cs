@@ -16,7 +16,8 @@ public sealed record RateWindow
         string? quotaUnit = null,
         bool isSyntheticPlaceholder = false,
         bool isDisabled = false,
-        string? disabledReason = null)
+        string? disabledReason = null,
+        string? group = null)
     {
         if (!double.IsFinite(usedPercent))
         {
@@ -33,6 +34,7 @@ public sealed record RateWindow
         this.IsSyntheticPlaceholder = isSyntheticPlaceholder;
         this.IsDisabled = isDisabled;
         this.DisabledReason = string.IsNullOrWhiteSpace(disabledReason) ? null : disabledReason.Trim();
+        this.Group = string.IsNullOrWhiteSpace(group) ? null : group.Trim();
     }
 
     public double UsedPercent { get; }
@@ -61,6 +63,12 @@ public sealed record RateWindow
 
     /// <summary>The provider's own explanation for a disabled lane, when it supplies one.</summary>
     public string? DisabledReason { get; }
+
+    /// <summary>
+    /// The model family the lane belongs to (e.g. Antigravity's "Gemini Models"). Null for providers
+    /// that do not group their lanes; the flyout renders a header only when a group is present.
+    /// </summary>
+    public string? Group { get; }
 
     public bool IsMeasured => !this.IsSyntheticPlaceholder && !this.IsDisabled;
 

@@ -248,6 +248,65 @@ public sealed class FlyoutBuilderTests
     }
 
     [Fact]
+    public void Antigravity_lanes_group_under_their_family_headers()
+    {
+        var snapshot = new UsageSnapshot(
+            ProviderKeys.Antigravity,
+            Now,
+            primary: new RateWindow(12, TimeSpan.FromDays(7), Now.AddDays(1), title: "weekly", group: "Gemini Models"),
+            secondary: new RateWindow(100, TimeSpan.FromDays(7), Now.AddDays(2), title: "weekly", group: "Claude and GPT models"),
+            extraWindows:
+            [
+                new NamedRateWindow(
+                    "a",
+                    "Gemini 5-hour",
+                    new RateWindow(11, TimeSpan.FromHours(5), Now.AddHours(2), title: "5-hour", group: "Gemini Models")),
+                new NamedRateWindow(
+                    "b",
+                    "Claude/GPT 5-hour",
+                    new RateWindow(0, TimeSpan.FromHours(5), isDisabled: true, title: "5-hour", group: "Claude and GPT models"),
+                    usageKnown: false),
+                new NamedRateWindow(
+                    "c",
+                    "Gemini 4 Argon weekly",
+                    new RateWindow(0, TimeSpan.FromDays(7), Now.AddDays(7), title: "weekly", group: "Gemini 4 Argon")),
+            ]);
+
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Antigravity, "Antigravity", snapshot)],
+            Now,
+            isRefreshing: false).Providers);
+
+        var windows = card.Windows;
+        Assert.Equal(5, windows.Count);
+
+        Assert.Equal("Gemini Models", windows[0].GroupHeader);
+        Assert.Equal("weekly", windows[0].Title);
+        Assert.Null(windows[1].GroupHeader);
+        Assert.Equal("5-hour", windows[1].Title);
+
+        Assert.Equal("Claude and GPT models", windows[2].GroupHeader);
+        Assert.Equal("weekly", windows[2].Title);
+        Assert.Null(windows[3].GroupHeader);
+        Assert.Equal("5-hour", windows[3].Title);
+        Assert.True(windows[3].IsDisabled);
+
+        Assert.Equal("Gemini 4 Argon", windows[4].GroupHeader);
+        Assert.Equal("weekly", windows[4].Title);
+    }
+
+    [Fact]
+    public void Providers_without_groups_do_not_gain_headers()
+    {
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Codex, "Codex", TestSnapshots.Codex(Now, session: 42, weekly: 61))],
+            Now,
+            isRefreshing: false).Providers);
+
+        Assert.All(card.Windows, static window => Assert.Null(window.GroupHeader));
+    }
+
+    [Fact]
     public void Pace_compares_usage_with_the_elapsed_share_of_the_window()
     {
         // Five-hour window with three hours left: 40% elapsed, so 42% used is on track.

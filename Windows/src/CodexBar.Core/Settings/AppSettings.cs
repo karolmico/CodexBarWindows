@@ -16,6 +16,14 @@ public sealed record ProviderPreference
     public bool Enabled { get; }
 }
 
+/// <summary>How the flyout chooses its palette; <see cref="System"/> follows the Windows app theme.</summary>
+public enum AppTheme
+{
+    System,
+    Light,
+    Dark,
+}
+
 /// <summary>User configuration persisted under the app data directory.</summary>
 public sealed record AppSettings
 {
@@ -32,7 +40,8 @@ public sealed record AppSettings
         bool notifyResets = true,
         TimeOnly? quietHoursStart = null,
         TimeOnly? quietHoursEnd = null,
-        bool startWithWindows = false)
+        bool startWithWindows = false,
+        AppTheme theme = AppTheme.System)
     {
         this.Providers = (providers ?? []).ToArray();
         this.RefreshFloor = ClampFloor(refreshFloor ?? TimeSpan.FromMinutes(MinRefreshFloorMinutes));
@@ -42,6 +51,7 @@ public sealed record AppSettings
         this.QuietHoursStart = quietHoursStart;
         this.QuietHoursEnd = quietHoursEnd;
         this.StartWithWindows = startWithWindows;
+        this.Theme = theme;
     }
 
     public int SchemaVersion { get; }
@@ -64,6 +74,9 @@ public sealed record AppSettings
 
     /// <summary>Opt-in per-user Run entry so CodexBar starts with Windows.</summary>
     public bool StartWithWindows { get; }
+
+    /// <summary>Palette choice: follow Windows, or force light or dark.</summary>
+    public AppTheme Theme { get; }
 
     /// <summary>Quiet hours need both ends; identical ends mean "always quiet" is treated as disabled.</summary>
     public bool HasQuietHours =>

@@ -69,6 +69,16 @@
             <TextBlock Text="Startup" FontWeight="SemiBold" Margin="0,14,0,6" />
             <CheckBox x:Name="StartWithWindowsBox"
                       Content="Start CodexBar with Windows (per-user, no elevation)" />
+
+            <TextBlock Text="Theme" FontWeight="SemiBold" Margin="0,14,0,6" />
+            <ComboBox x:Name="ThemeBox"
+                      Width="160"
+                      HorizontalAlignment="Left"
+                      SelectedValuePath="Tag">
+                <ComboBoxItem Content="System (follow Windows)" Tag="System" />
+                <ComboBoxItem Content="Light" Tag="Light" />
+                <ComboBoxItem Content="Dark" Tag="Dark" />
+            </ComboBox>
         </StackPanel>
 
         <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">

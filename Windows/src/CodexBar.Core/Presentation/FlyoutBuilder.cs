@@ -34,6 +34,12 @@ public sealed record FlyoutWindowModel(
 {
     /// <summary>A disabled lane has no meaningful fill, so its bar is hidden instead of drawn at zero.</summary>
     public bool ShowBar => !this.IsDisabled;
+
+    /// <summary>The model family this lane belongs to; null when the provider has no groups.</summary>
+    public string? Group { get; init; }
+
+    /// <summary>Family name on the first lane of a family, so the flyout renders one header per family.</summary>
+    public string? GroupHeader { get; init; }
 }
 
 /// <summary>One provider: its tab in the switcher and the detail pane shown when it is selected.</summary>
@@ -157,17 +163,37 @@ public static class FlyoutBuilder
         var windows = new List<FlyoutWindowModel>();
         if (provider.Snapshot is { } snapshot)
         {
-            AddWindow(windows, "Session", snapshot.Primary, now, visual.Accent);
-            AddWindow(windows, "Weekly", snapshot.Secondary, now, visual.Accent);
+            AddWindow(
+                windows,
+                snapshot.Primary?.Title ?? "Session",
+                snapshot.Primary,
+                now,
+                visual.Accent,
+                snapshot.Primary?.Group);
+            AddWindow(
+                windows,
+                snapshot.Secondary?.Title ?? "Weekly",
+                snapshot.Secondary,
+                now,
+                visual.Accent,
+                snapshot.Secondary?.Group);
             foreach (var extra in snapshot.ExtraWindows)
             {
                 if (extra.UsageKnown || extra.Window.IsDisabled || extra.Window.ResetsAt is not null
                     || !string.IsNullOrWhiteSpace(extra.Window.ResetDescription))
                 {
-                    AddWindow(windows, extra.Title, extra.Window, now, visual.Accent);
+                    AddWindow(
+                        windows,
+                        extra.Window.Title ?? extra.Title,
+                        extra.Window,
+                        now,
+                        visual.Accent,
+                        extra.Window.Group);
                 }
             }
         }
+
+        var grouped = GroupByFamily(windows);
 
         var status = provider.Error is not null
             ? ProviderStatusText.Label(provider.Error)
@@ -182,12 +208,50 @@ public static class FlyoutBuilder
             visual.Accent,
             provider.Snapshot?.Identity?.PlanName,
             provider.Snapshot?.Identity?.AccountLabel,
-            windows,
+            grouped,
             status,
             StatusKind(provider, windows.Count),
             UpdatedText(provider, now),
             ProviderLinks.For(provider.Key),
             isHighlighted);
+    }
+
+    /// <summary>
+    /// Keeps lanes in family order and stamps the family name onto the first lane of each family, so the
+    /// flyout can render a header above it. Providers without groups pass through untouched.
+    /// </summary>
+    private static IReadOnlyList<FlyoutWindowModel> GroupByFamily(IReadOnlyList<FlyoutWindowModel> windows)
+    {
+        if (!windows.Any(static window => window.Group is not null))
+        {
+            return windows;
+        }
+
+        var order = new Dictionary<string, int>(StringComparer.Ordinal);
+        var sequence = 0;
+        foreach (var window in windows)
+        {
+            if (window.Group is { } group && !order.ContainsKey(group))
+            {
+                order[group] = sequence++;
+            }
+        }
+
+        var ordered = windows
+            .OrderBy(window => window.Group is { } group ? order[group] : -1)
+            .ToArray();
+
+        string? lastGroup = null;
+        for (var index = 0; index < ordered.Length; index++)
+        {
+            if (ordered[index].Group is { } group && !string.Equals(group, lastGroup, StringComparison.Ordinal))
+            {
+                ordered[index] = ordered[index] with { GroupHeader = group };
+                lastGroup = group;
+            }
+        }
+
+        return ordered;
     }
 
     private static FlyoutStatusKind StatusKind(ProviderState provider, int windowCount) =>
@@ -222,7 +286,8 @@ public static class FlyoutBuilder
         string title,
         RateWindow? window,
         DateTimeOffset now,
-        string accent)
+        string accent,
+        string? group = null)
     {
         if (window is null || (!window.IsMeasured && !window.IsDisabled))
         {
@@ -244,7 +309,10 @@ public static class FlyoutBuilder
                 PaceText: null,
                 accent,
                 IsDisabled: true,
-                NoteText: Truncate(window.DisabledReason, 160)));
+                NoteText: Truncate(window.DisabledReason, 160))
+            {
+                Group = group,
+            });
             return;
         }
 
@@ -260,7 +328,10 @@ public static class FlyoutBuilder
             Capitalize(UsageFormatter.FormatReset(window, now)),
             window.IsExhausted,
             DescribePace(window, now),
-            accent));
+            accent)
+        {
+            Group = group,
+        });
     }
 
     private static string? Truncate(string? value, int maxLength)

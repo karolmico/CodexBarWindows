@@ -28,12 +28,15 @@ internal sealed record AntigravityQuotaLane(
                     ? "Claude/GPT"
                     : this.GroupName;
 
-    public string Title => $"{this.Family} {this.Cadence switch
+    public string Title => $"{this.Family} {this.CadenceLabel}";
+
+    /// <summary>Label within a group, used under the family header: "5-hour", "weekly", or the bucket name.</summary>
+    public string CadenceLabel => this.Cadence switch
     {
         "Session" => "5-hour",
         "Weekly" => "weekly",
         _ => this.BucketName,
-    }}";
+    };
 
     public double UsedPercent => Math.Clamp((1d - (this.RemainingFraction ?? 1d)) * 100d, 0d, 200d);
 
@@ -50,8 +53,10 @@ internal sealed record AntigravityQuotaLane(
             this.UsedPercent,
             window,
             this.ResetsAt,
+            title: this.CadenceLabel,
             isDisabled: this.Disabled,
-            disabledReason: this.Disabled ? this.Description : null);
+            disabledReason: this.Disabled ? this.Description : null,
+            group: this.GroupName);
     }
 }
 

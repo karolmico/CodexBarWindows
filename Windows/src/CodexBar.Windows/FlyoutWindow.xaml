@@ -5,7 +5,6 @@
         Title="CodexBar"
         Width="460"
         SizeToContent="Height"
-        MaxHeight="760"
         WindowStyle="None"
         AllowsTransparency="True"
         Background="Transparent"
@@ -30,7 +29,7 @@
         <!-- Tab in the provider switcher: mark over name over a health dot, pill when selected. -->
         <Style x:Key="TabButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#7A7A85" />
+            <Setter Property="Foreground" Value="{DynamicResource Flyout.TabInactive}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Height" Value="58" />
             <Setter Property="Margin" Value="1,0" />
@@ -47,7 +46,7 @@
             </Setter>
             <Style.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Foreground" Value="#1F2937" />
+                    <Setter Property="Foreground" Value="{DynamicResource Flyout.Text}" />
                 </Trigger>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
                     <Setter Property="Foreground" Value="White" />
@@ -58,7 +57,7 @@
         <!-- One menu row: glyph, label, hover wash. Used for provider and app actions. -->
         <Style x:Key="ActionButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#1F2937" />
+            <Setter Property="Foreground" Value="{DynamicResource Flyout.Text}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
             <Setter Property="Padding" Value="8,6" />
@@ -74,10 +73,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#0A000000" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Flyout.Hover}" />
                             </Trigger>
                             <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#14000000" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Flyout.Pressed}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -89,14 +88,14 @@
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Width" Value="20" />
-            <Setter Property="Foreground" Value="#6B7280" />
+            <Setter Property="Foreground" Value="{DynamicResource Flyout.TextTertiary}" />
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="TextAlignment" Value="Center" />
         </Style>
 
         <Style x:Key="LinkButton" TargetType="Button">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="#6B7280" />
+            <Setter Property="Foreground" Value="{DynamicResource Flyout.TextTertiary}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Padding" Value="6,3" />
@@ -111,8 +110,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Chrome" Property="Background" Value="#0A000000" />
-                                <Setter Property="Foreground" Value="#1F2937" />
+                                <Setter TargetName="Chrome" Property="Background" Value="{DynamicResource Flyout.Hover}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Flyout.Text}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -125,7 +124,7 @@
             <Setter Property="Height" Value="6" />
             <Setter Property="Minimum" Value="0" />
             <Setter Property="Maximum" Value="100" />
-            <Setter Property="Background" Value="#14000000" />
+            <Setter Property="Background" Value="{DynamicResource Flyout.Track}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ProgressBar">
@@ -158,7 +157,7 @@
                                     <Thumb>
                                         <Thumb.Template>
                                             <ControlTemplate TargetType="Thumb">
-                                                <Border Background="#26000000" CornerRadius="4" Margin="2,1" />
+                                                <Border Background="{DynamicResource Flyout.ScrollThumb}" CornerRadius="4" Margin="2,1" />
                                             </ControlTemplate>
                                         </Thumb.Template>
                                     </Thumb>
@@ -185,14 +184,14 @@
                         <TextBlock Text="{Binding Name}"
                                    FontSize="19"
                                    FontWeight="SemiBold"
-                                   Foreground="#111827"
+                                   Foreground="{DynamicResource Flyout.Text}"
                                    TextTrimming="CharacterEllipsis" />
                         <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                            <TextBlock Text="{Binding UpdatedText}" FontSize="11" Foreground="#9CA3AF" />
+                            <TextBlock Text="{Binding UpdatedText}" FontSize="11" Foreground="{DynamicResource Flyout.TextTertiary}" />
                             <TextBlock Text="{Binding Subtitle}"
                                        Margin="8,0,0,0"
                                        FontSize="11"
-                                       Foreground="#9CA3AF"
+                                       Foreground="{DynamicResource Flyout.TextTertiary}"
                                        TextTrimming="CharacterEllipsis"
                                        Visibility="{Binding Subtitle, Converter={StaticResource HasValue}}" />
                         </StackPanel>
@@ -202,42 +201,49 @@
                             Margin="8,2,0,0"
                             Padding="7,3"
                             CornerRadius="6"
-                            Background="#0C000000"
+                            Background="{DynamicResource Flyout.PlanBg}"
                             Visibility="{Binding Plan, Converter={StaticResource HasValue}}">
-                        <TextBlock Text="{Binding Plan}" FontSize="10.5" Foreground="#4B5563" />
+                        <TextBlock Text="{Binding Plan}" FontSize="10.5" Foreground="{DynamicResource Flyout.PlanFg}" />
                     </Border>
                 </Grid>
 
                 <TextBlock Text="{Binding Status}"
                            Margin="0,8,0,0"
                            FontSize="11"
-                           Foreground="#B45309"
+                           Foreground="{DynamicResource Flyout.StatusWarn}"
                            Visibility="{Binding Status, Converter={StaticResource HasValue}}" />
 
                 <ItemsControl ItemsSource="{Binding Windows}" Margin="0,10,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Margin="0,0,0,14">
+                                <TextBlock Text="{Binding GroupHeader}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource Flyout.TextSecondary}"
+                                           Margin="0,0,0,6"
+                                           Visibility="{Binding GroupHeader, Converter={StaticResource HasValue}}" />
+
                                 <DockPanel LastChildFill="False">
                                     <TextBlock Text="{Binding Title}"
                                                FontSize="13"
                                                FontWeight="SemiBold"
-                                               Foreground="#111827" />
+                                               Foreground="{DynamicResource Flyout.Text}" />
                                     <Border DockPanel.Dock="Right"
                                             Margin="6,0,0,0"
                                             Padding="6,1"
                                             CornerRadius="5"
-                                            Background="#10B45309"
+                                            Background="{DynamicResource Flyout.DisabledBg}"
                                             Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="disabled" FontSize="10" Foreground="#92620B" />
+                                        <TextBlock Text="disabled" FontSize="10" Foreground="{DynamicResource Flyout.DisabledFg}" />
                                     </Border>
                                     <Border DockPanel.Dock="Right"
                                             Margin="6,0,0,0"
                                             Padding="6,1"
                                             CornerRadius="5"
-                                            Background="#14B42318"
+                                            Background="{DynamicResource Flyout.ExhaustedBg}"
                                             Visibility="{Binding IsExhausted, Converter={StaticResource BoolToVisibility}}">
-                                        <TextBlock Text="exhausted" FontSize="10" Foreground="#B42318" />
+                                        <TextBlock Text="exhausted" FontSize="10" Foreground="{DynamicResource Flyout.ExhaustedFg}" />
                                     </Border>
                                 </DockPanel>
 
@@ -248,25 +254,25 @@
                                              Foreground="{Binding Accent, Converter={StaticResource HexBrush}}" />
 
                                 <DockPanel LastChildFill="False" Margin="0,6,0,0">
-                                    <TextBlock Text="{Binding UsageText}" FontSize="11" Foreground="#4B5563" />
+                                    <TextBlock Text="{Binding UsageText}" FontSize="11" Foreground="{DynamicResource Flyout.TextSecondary}" />
                                     <TextBlock DockPanel.Dock="Right"
                                                Text="{Binding ResetText}"
                                                FontSize="11"
-                                               Foreground="#9CA3AF"
+                                               Foreground="{DynamicResource Flyout.TextTertiary}"
                                                Visibility="{Binding ResetText, Converter={StaticResource HasValue}}" />
                                 </DockPanel>
 
                                 <TextBlock Text="{Binding PaceText}"
                                            Margin="0,3,0,0"
                                            FontSize="11"
-                                           Foreground="#9CA3AF"
+                                           Foreground="{DynamicResource Flyout.TextTertiary}"
                                            TextTrimming="CharacterEllipsis"
                                            Visibility="{Binding PaceText, Converter={StaticResource HasValue}}" />
 
                                 <TextBlock Text="{Binding NoteText}"
                                            Margin="0,3,0,0"
                                            FontSize="11"
-                                           Foreground="#9CA3AF"
+                                           Foreground="{DynamicResource Flyout.TextTertiary}"
                                            TextWrapping="Wrap"
                                            Visibility="{Binding NoteText, Converter={StaticResource HasValue}}" />
                             </StackPanel>
@@ -277,11 +283,11 @@
                 <TextBlock Text="This provider reported no quota window."
                            Margin="0,2,0,6"
                            FontSize="11"
-                           Foreground="#9CA3AF"
+                           Foreground="{DynamicResource Flyout.TextTertiary}"
                            Visibility="{Binding Windows, Converter={StaticResource Empty}}" />
 
                 <StackPanel Margin="0,2,0,0">
-                    <Border Height="1" Background="#0F000000" Margin="0,2,0,6" />
+                    <Border Height="1" Background="{DynamicResource Flyout.Divider}" Margin="0,2,0,6" />
 
                     <Button Style="{StaticResource ActionButton}"
                             Click="OnConfigureProvider"
@@ -318,19 +324,19 @@
     </Window.Resources>
 
     <Border Margin="12"
-            Background="#FCFCFD"
-            BorderBrush="#1A000000"
+            Background="{DynamicResource Flyout.Surface}"
+            BorderBrush="{DynamicResource Flyout.Border}"
             BorderThickness="1"
             CornerRadius="16">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.18" Color="#000000" />
+            <DropShadowEffect BlurRadius="24" ShadowDepth="4" Opacity="0.22" Color="#000000" />
         </Border.Effect>
 
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
-                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
@@ -383,12 +389,13 @@
 
             <Border Grid.Row="1"
                     Height="1"
-                    Background="#0F000000"
+                    Background="{DynamicResource Flyout.Divider}"
                     Visibility="{Binding HasProviders, Converter={StaticResource BoolToVisibility}}" />
 
-            <!-- Detail of the selected provider; long quotas scroll, the menus stay put. -->
+            <!-- Detail of the selected provider. The star row fills whatever height is left after the
+                 window is sized to its content, so a scrollbar appears only when the content does not
+                 fit the work area. -->
             <ScrollViewer Grid.Row="2"
-                          MaxHeight="430"
                           VerticalScrollBarVisibility="Auto"
                           HorizontalScrollBarVisibility="Disabled">
                 <ScrollViewer.Resources>
@@ -404,18 +411,18 @@
                         <TextBlock Text="No providers enabled"
                                    FontSize="13"
                                    FontWeight="SemiBold"
-                                   Foreground="#111827" />
+                                   Foreground="{DynamicResource Flyout.Text}" />
                         <TextBlock Text="Open Settings and choose at least one provider."
                                    Margin="0,4,0,0"
                                    FontSize="11.5"
-                                   Foreground="#9CA3AF"
+                                   Foreground="{DynamicResource Flyout.TextTertiary}"
                                    TextWrapping="Wrap" />
                     </StackPanel>
                 </Grid>
             </ScrollViewer>
 
             <StackPanel Grid.Row="3" Margin="10,0,10,8">
-                <Border Height="1" Background="#0F000000" Margin="6,0,6,6" />
+                <Border Height="1" Background="{DynamicResource Flyout.Divider}" Margin="6,0,6,6" />
 
                 <Button Style="{StaticResource ActionButton}" Click="OnSettings">
                     <StackPanel Orientation="Horizontal">
@@ -452,7 +459,7 @@
                                Margin="6,0,0,0"
                                MaxWidth="180"
                                FontSize="11"
-                               Foreground="#6B7280"
+                               Foreground="{DynamicResource Flyout.TextTertiary}"
                                VerticalAlignment="Center"
                                TextTrimming="CharacterEllipsis"
                                Visibility="Collapsed" />

@@ -93,7 +93,8 @@ public sealed class SettingsStore
                 document.NotifyResets ?? defaults.NotifyResets,
                 ParseTime(document.QuietHoursStart) ?? defaults.QuietHoursStart,
                 ParseTime(document.QuietHoursEnd) ?? defaults.QuietHoursEnd,
-                document.StartWithWindows ?? defaults.StartWithWindows);
+                document.StartWithWindows ?? defaults.StartWithWindows,
+                ParseTheme(document.Theme) ?? defaults.Theme);
 
             return new SettingsLoadResult(settings, Warning: null);
         }
@@ -117,7 +118,8 @@ public sealed class SettingsStore
             settings.NotifyResets,
             FormatTime(settings.QuietHoursStart),
             FormatTime(settings.QuietHoursEnd),
-            settings.StartWithWindows);
+            settings.StartWithWindows,
+            settings.Theme.ToString().ToLowerInvariant());
 
         this.writeAllText(this.path, JsonSerializer.Serialize(document, JsonOptions));
     }
@@ -179,6 +181,12 @@ public sealed class SettingsStore
     private static string? FormatTime(TimeOnly? value) =>
         value?.ToString("HH:mm", CultureInfo.InvariantCulture);
 
+    private static AppTheme? ParseTheme(string? value) =>
+        !string.IsNullOrWhiteSpace(value)
+        && Enum.TryParse<AppTheme>(value, ignoreCase: true, out var theme)
+            ? theme
+            : null;
+
     private static void WriteFileAtomically(string path, string content)
     {
         var directory = System.IO.Path.GetDirectoryName(path);
@@ -200,7 +208,8 @@ public sealed class SettingsStore
         bool? NotifyResets,
         string? QuietHoursStart,
         string? QuietHoursEnd,
-        bool? StartWithWindows);
+        bool? StartWithWindows,
+        string? Theme);
 
     private sealed record ProviderEntry(string? Key, bool Enabled);
 }
