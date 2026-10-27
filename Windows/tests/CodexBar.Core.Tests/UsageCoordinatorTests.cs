@@ -234,7 +234,7 @@ public sealed class UsageCoordinatorTests
 
     private sealed class ThrowingProvider : IUsageProvider
     {
-        public ProviderDescriptor Descriptor { get; } = new(ProviderKeys.Gemini, "Gemini");
+        public ProviderDescriptor Descriptor { get; } = new(ProviderKeys.OpenCode, "OpenCode");
 
         public Task<UsageFetchResult> FetchAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Boom in the tray pipeline.");

@@ -62,11 +62,11 @@
     }
   },
   {
-    "provider": "gemini",
-    "source": "gemini-cli",
+    "provider": "copilot",
+    "source": "gh-cli",
     "error": {
       "code": 1,
-      "message": "Gemini credentials not found. Run `gemini` to sign in.",
+      "message": "GitHub token not found. Run `gh auth login`, or save a token in CodexBar's provider setup.",
       "kind": "provider",
       "providerErrorKind": "notConfigured"
     }

@@ -16,5 +16,5 @@ Opus: 88% left [==========--]
 Resets after top-up
 Plan: Max
 
-== Gemini (gemini-cli) ==
-Error: Gemini credentials not found. Run `gemini` to sign in.
+== Copilot (gh-cli) ==
+Error: GitHub token not found. Run `gh auth login`, or save a token in CodexBar's provider setup.

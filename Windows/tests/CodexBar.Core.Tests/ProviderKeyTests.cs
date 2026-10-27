@@ -52,7 +52,7 @@ public sealed class ProviderKeyTests
         Assert.Equal("codex", ProviderKeys.Codex.Value);
         Assert.Equal("claude", ProviderKeys.Claude.Value);
         Assert.Equal("cursor", ProviderKeys.Cursor.Value);
-        Assert.Equal("gemini", ProviderKeys.Gemini.Value);
+        Assert.Equal("opencode", ProviderKeys.OpenCode.Value);
         Assert.Equal("copilot", ProviderKeys.Copilot.Value);
         Assert.Equal("antigravity", ProviderKeys.Antigravity.Value);
     }

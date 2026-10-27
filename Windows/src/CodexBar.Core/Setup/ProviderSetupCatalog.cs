@@ -113,19 +113,6 @@ public static class ProviderSetupCatalog
             helpUrl: "https://github.com/anthropics/claude-code",
             helpLabel: "Claude Code on GitHub"),
         new(
-            ProviderKeys.Gemini,
-            "Gemini",
-            "CodexBar reads the Google sign-in saved by the Gemini CLI.",
-            [
-                "Install the Gemini CLI if you have not: npm install -g @google/gemini-cli",
-                "Run `gemini` and choose Login with Google.",
-                "Return here and choose Check connection.",
-            ],
-            command: "gemini",
-            credentialsPath: @"%USERPROFILE%\.gemini\oauth_creds.json",
-            helpUrl: "https://github.com/google-gemini/gemini-cli",
-            helpLabel: "Gemini CLI on GitHub"),
-        new(
             ProviderKeys.Copilot,
             "Copilot",
             "GitHub Copilot needs a GitHub token. Sign in with the GitHub CLI, or save a personal access token below.",

@@ -56,10 +56,10 @@ public sealed class CliGoldenTests
         Assert.Equal("Plus", codex.Usage.Identity!.Plan);
         Assert.Null(codex.Error);
 
-        var gemini = payload[2];
-        Assert.Null(gemini.Usage);
-        Assert.Equal("notConfigured", gemini.Error!.ProviderErrorKind);
-        Assert.Equal("provider", gemini.Error.Kind);
+        var copilot = payload[2];
+        Assert.Null(copilot.Usage);
+        Assert.Equal("notConfigured", copilot.Error!.ProviderErrorKind);
+        Assert.Equal("provider", copilot.Error.Kind);
     }
 
     [Fact]
@@ -89,20 +89,20 @@ public sealed class CliGoldenTests
     public void Unknown_named_windows_are_unavailable_instead_of_zero()
     {
         var snapshot = new UsageSnapshot(
-            ProviderKeys.Gemini,
+            ProviderKeys.Copilot,
             Now,
             extraWindows:
             [
                 new NamedRateWindow(
-                    "gemini-3-pro",
-                    "Gemini 3 Pro",
+                    "copilot-premium",
+                    "Premium requests",
                     new RateWindow(0d, TimeSpan.FromDays(1)),
                     usageKnown: false),
             ]);
         var result = new CliProviderResult(
-            ProviderKeys.Gemini,
-            "Gemini",
-            "gemini-cli",
+            ProviderKeys.Copilot,
+            "Copilot",
+            "gh-cli",
             snapshot,
             Error: null,
             TimeSpan.Zero);
@@ -110,7 +110,7 @@ public sealed class CliGoldenTests
         var text = CliTextRenderer.Render([result], Now);
         var json = CliPayloadBuilder.ToJson(CliPayloadBuilder.Build([result]), pretty: false);
 
-        Assert.Contains("Gemini 3 Pro: Unavailable", text, StringComparison.Ordinal);
+        Assert.Contains("Premium requests: Unavailable", text, StringComparison.Ordinal);
         Assert.DoesNotContain("0% left", text, StringComparison.Ordinal);
         Assert.Contains("\"usageKnown\":false", json, StringComparison.Ordinal);
     }
@@ -158,11 +158,12 @@ public sealed class CliGoldenTests
             new(ProviderKeys.Codex, "Codex", CliSources.For(ProviderKeys.Codex), codex, null, TimeSpan.FromMilliseconds(120)),
             new(ProviderKeys.Claude, "Claude", CliSources.For(ProviderKeys.Claude), claude, null, TimeSpan.FromMilliseconds(80)),
             new(
-                ProviderKeys.Gemini,
-                "Gemini",
-                CliSources.For(ProviderKeys.Gemini),
+                ProviderKeys.Copilot,
+                "Copilot",
+                CliSources.For(ProviderKeys.Copilot),
                 null,
-                ProviderError.NotConfigured("Gemini credentials not found. Run `gemini` to sign in."),
+                ProviderError.NotConfigured(
+                    "GitHub token not found. Run `gh auth login`, or save a token in CodexBar's provider setup."),
                 TimeSpan.FromMilliseconds(5)),
         ];
     }

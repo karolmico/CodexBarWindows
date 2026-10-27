@@ -12,7 +12,7 @@ public sealed class SettingsStoreTests
         [
             new ProviderPreference(ProviderKeys.Codex, enabled: true),
             new ProviderPreference(ProviderKeys.Claude, enabled: true),
-            new ProviderPreference(ProviderKeys.Gemini, enabled: false),
+            new ProviderPreference(ProviderKeys.Copilot, enabled: false),
         ],
         TimeSpan.FromMinutes(5));
 
@@ -65,7 +65,7 @@ public sealed class SettingsStoreTests
         Assert.Equal(ProviderKeys.Codex, loaded.Providers[1].Key);
         Assert.True(loaded.Providers[1].Enabled);
         // A provider this build registers but the file predates is appended with its default state.
-        Assert.Equal(ProviderKeys.Gemini, loaded.Providers[2].Key);
+        Assert.Equal(ProviderKeys.Copilot, loaded.Providers[2].Key);
         Assert.False(loaded.Providers[2].Enabled);
         Assert.Equal(TimeSpan.FromMinutes(12), loaded.RefreshFloor);
     }
@@ -203,7 +203,7 @@ public sealed class SettingsStoreTests
         var defaults = AppSettings.DefaultFor(
         [
             new ProviderDescriptor(ProviderKeys.Codex, "Codex"),
-            new ProviderDescriptor(ProviderKeys.Gemini, "Gemini", enabledByDefault: false),
+            new ProviderDescriptor(ProviderKeys.Copilot, "Copilot", enabledByDefault: false),
         ]);
 
         var enabled = Assert.Single(defaults.EnabledProviderKeys);

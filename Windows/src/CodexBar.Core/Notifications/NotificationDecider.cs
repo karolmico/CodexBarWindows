@@ -40,8 +40,9 @@ public sealed record UsageNotification(
 
 /// <summary>
 /// Decides which threshold and reset notifications to raise. State is per provider and quota lane:
-/// each configured threshold fires once until usage drops below it, and each reset instant fires once.
-/// Quiet hours and disabled categories suppress delivery without repeating the alert later.
+/// each configured threshold fires once until usage drops below it, and each window that actually
+/// elapses fires one reset alert. Quiet hours and disabled categories suppress delivery without
+/// repeating the alert later.
 /// </summary>
 public sealed class NotificationDecider
 {
@@ -145,7 +146,7 @@ public sealed class NotificationDecider
             this.lanes[key] = state;
         }
 
-        var resetDetected = this.DetectReset(provider, title, window, settings, quiet, notifications, state);
+        var resetDetected = this.DetectReset(provider, title, window, settings, now, quiet, notifications, state);
         var thresholds = settings.NotificationThresholds;
         var crossed = thresholds
             .Where(threshold => window.UsedPercent >= threshold)
@@ -191,20 +192,32 @@ public sealed class NotificationDecider
         string title,
         RateWindow window,
         AppSettings settings,
+        DateTimeOffset now,
         bool quiet,
         List<UsageNotification> notifications,
         LaneState state)
     {
         if (window.ResetsAt is not { } resetsAt)
         {
+            // A provider that stops reporting the instant must not be compared against a stale one.
+            state.ResetsAt = null;
             return false;
         }
 
-        var resetDetected = state.ResetsAt is { } previous
-            && resetsAt - previous > ResetTolerance;
+        var previous = state.ResetsAt;
         state.ResetsAt = resetsAt;
+        if (previous is not { } previousReset)
+        {
+            return false;
+        }
 
-        if (!resetDetected)
+        // A real reset means the window we were watching actually elapsed and a later window replaced
+        // it. Some providers recompute "now + window" on every poll (Antigravity's per-model weekly
+        // lanes do), which moves the instant forward without a cycle boundary. Treating a forward
+        // move alone as a reset produced one toast per refresh, so both conditions are required.
+        var windowElapsed = previousReset <= now;
+        var replacedByLaterWindow = resetsAt > now && resetsAt - previousReset > ResetTolerance;
+        if (!windowElapsed || !replacedByLaterWindow)
         {
             return false;
         }

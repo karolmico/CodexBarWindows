@@ -12,11 +12,11 @@ public sealed class ProviderRegistryTests
     [Fact]
     public void Resolves_providers_in_the_configured_order()
     {
-        var registry = Registry(ProviderKeys.Codex, ProviderKeys.Claude, ProviderKeys.Gemini);
+        var registry = Registry(ProviderKeys.Codex, ProviderKeys.Claude, ProviderKeys.Copilot);
 
-        var resolved = registry.Resolve([ProviderKeys.Gemini, ProviderKeys.Codex]);
+        var resolved = registry.Resolve([ProviderKeys.Copilot, ProviderKeys.Codex]);
 
-        Assert.Equal(["gemini", "codex"], resolved.Select(provider => provider.Descriptor.Key.Value));
+        Assert.Equal(["copilot", "codex"], resolved.Select(provider => provider.Descriptor.Key.Value));
     }
 
     [Fact]

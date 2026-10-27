@@ -1,7 +1,7 @@
 # ADR 0002 — First-release provider set is the Linux parity set
 
 Date: 2026-10-27
-Status: accepted
+Status: accepted; provider set amended by ADR 0004 (opencode added) and ADR 0005 (gemini retired)
 
 ## Context
 

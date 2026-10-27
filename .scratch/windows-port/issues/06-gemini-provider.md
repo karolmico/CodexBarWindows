@@ -4,7 +4,7 @@
 
 **Blocked by:** 03, 04
 
-**Status:** done
+**Status:** superseded by ticket 17 (provider retired, ADR 0005)
 
 - [x] Stored Gemini CLI credentials are located on Windows and never written by the app
 - [x] Recorded payloads map the reported quota lanes and reset instants

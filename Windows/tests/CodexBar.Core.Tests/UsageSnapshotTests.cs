@@ -50,7 +50,7 @@ public sealed class UsageSnapshotTests
     [Fact]
     public void Snapshot_without_windows_reports_no_measurement()
     {
-        var snapshot = new UsageSnapshot(ProviderKeys.Gemini, Now);
+        var snapshot = new UsageSnapshot(ProviderKeys.OpenCode, Now);
 
         Assert.False(snapshot.HasMeasuredWindows);
         Assert.Null(snapshot.HighestUsedPercent);

@@ -81,7 +81,7 @@ public sealed class TrayMenuBuilderTests
         {
             new ProviderState(ProviderKeys.Codex, "Codex Enterprise Workspace", TestSnapshots.Codex(Now, 42d, 87d)),
             new ProviderState(ProviderKeys.Claude, "Claude Enterprise Workspace", TestSnapshots.Claude(Now, 10d, 63d)),
-            new ProviderState(ProviderKeys.Gemini, "Gemini Enterprise Workspace", TestSnapshots.Claude(Now, 7d, 12d)),
+            new ProviderState(ProviderKeys.Copilot, "Copilot Enterprise Workspace", TestSnapshots.Claude(Now, 7d, 12d)),
         };
 
         var toolTip = TrayMenuBuilder.BuildToolTip(providers, isRefreshing: false);

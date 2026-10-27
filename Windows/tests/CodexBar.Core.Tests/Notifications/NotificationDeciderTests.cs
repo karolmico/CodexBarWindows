@@ -53,31 +53,90 @@ public sealed class NotificationDeciderTests
     }
 
     [Fact]
-    public void A_reset_advancing_emits_once_and_rearms_the_thresholds()
+    public void An_elapsed_window_emits_once_and_rearms_the_thresholds()
     {
         var decider = new NotificationDecider();
         var firstReset = Now.AddHours(3);
         var secondReset = Now.AddHours(8);
+        var afterFirstReset = firstReset.AddMinutes(1);
 
         Assert.Empty(Evaluate(decider, 70, firstReset));
-        var reset = Assert.Single(Evaluate(decider, 0, secondReset));
+        var reset = Assert.Single(Evaluate(decider, 0, secondReset, afterFirstReset));
         Assert.Equal(UsageNotificationKind.Reset, reset.Kind);
         Assert.Equal("Codex reset", reset.Title);
         Assert.Equal("Session reset: 0% used.", reset.Message);
-        Assert.Empty(Evaluate(decider, 0, secondReset));
-        Assert.Equal(80, Assert.Single(Evaluate(decider, 82, secondReset)).Threshold);
+        Assert.Empty(Evaluate(decider, 0, secondReset, afterFirstReset));
+        Assert.Equal(80, Assert.Single(Evaluate(decider, 82, secondReset, afterFirstReset)).Threshold);
     }
 
     [Fact]
     public void A_reset_without_usage_drop_still_rearms_and_does_not_stack_a_threshold()
     {
         var decider = new NotificationDecider();
+        var firstReset = Now.AddHours(3);
 
-        Assert.Empty(Evaluate(decider, 70, Now.AddHours(3)));
-        var reset = Assert.Single(Evaluate(decider, 96, Now.AddHours(8)));
+        Assert.Empty(Evaluate(decider, 70, firstReset));
+        var reset = Assert.Single(Evaluate(decider, 96, Now.AddHours(8), firstReset.AddMinutes(1)));
 
         Assert.Equal(UsageNotificationKind.Reset, reset.Kind);
-        Assert.Empty(Evaluate(decider, 96, Now.AddHours(8)));
+        Assert.Empty(Evaluate(decider, 96, Now.AddHours(8), firstReset.AddMinutes(1)));
+    }
+
+    [Fact]
+    public void A_window_end_that_slides_forward_every_poll_never_notifies()
+    {
+        // Antigravity reports its per-model weekly lanes as "now + 7 days" on every refresh. That
+        // moves the instant forward about once a minute without a real cycle boundary, and used to
+        // produce one "reset" toast per poll.
+        var decider = new NotificationDecider();
+
+        for (var minute = 0; minute < 8; minute++)
+        {
+            var at = Now.AddMinutes(minute);
+            Assert.Empty(Evaluate(decider, 0, at.AddDays(7), at, "Gemini 4 Argon weekly"));
+        }
+    }
+
+    [Fact]
+    public void A_window_end_that_stays_in_the_past_never_notifies()
+    {
+        var decider = new NotificationDecider();
+
+        for (var minute = 0; minute < 5; minute++)
+        {
+            var at = Now.AddMinutes(minute);
+            Assert.Empty(Evaluate(decider, 0, at.AddMinutes(-10), at));
+        }
+    }
+
+    [Fact]
+    public void A_reset_that_happened_while_the_app_was_closed_notifies_once()
+    {
+        var decider = new NotificationDecider();
+        var firstReset = Now.AddHours(1);
+
+        Assert.Empty(Evaluate(decider, 50, firstReset));
+        var reset = Assert.Single(Evaluate(decider, 0, Now.AddHours(8), Now.AddHours(3)));
+
+        Assert.Equal(UsageNotificationKind.Reset, reset.Kind);
+        Assert.Empty(Evaluate(decider, 0, Now.AddHours(8), Now.AddHours(3)));
+    }
+
+    [Fact]
+    public void A_window_without_a_reset_instant_is_not_compared_against_a_stale_one()
+    {
+        var decider = new NotificationDecider();
+        var withoutReset = new ProviderState(
+            ProviderKeys.Codex,
+            "Codex",
+            new UsageSnapshot(
+                ProviderKeys.Codex,
+                Now,
+                primary: new RateWindow(0, TimeSpan.FromHours(5))));
+
+        Assert.Empty(Evaluate(decider, 0, Now.AddHours(2)));
+        Assert.Empty(decider.Evaluate([withoutReset], Defaults, Now.AddHours(3)));
+        Assert.Empty(Evaluate(decider, 0, Now.AddHours(8), Now.AddHours(3)));
     }
 
     [Fact]
@@ -85,10 +144,15 @@ public sealed class NotificationDeciderTests
     {
         var decider = new NotificationDecider();
         var settings = new AppSettings(notifyResets: false);
+        var firstReset = Now.AddHours(3);
+        var secondReset = Now.AddHours(8);
+        var afterFirstReset = firstReset.AddMinutes(1);
 
-        Assert.Empty(decider.Evaluate([State(70, Now.AddHours(3))], settings, Now));
-        Assert.Empty(decider.Evaluate([State(0, Now.AddHours(8))], settings, Now));
-        Assert.Equal(80, Assert.Single(decider.Evaluate([State(82, Now.AddHours(8))], settings, Now)).Threshold);
+        Assert.Empty(decider.Evaluate([State(70, firstReset)], settings, Now));
+        Assert.Empty(decider.Evaluate([State(0, secondReset)], settings, afterFirstReset));
+        Assert.Equal(
+            80,
+            Assert.Single(decider.Evaluate([State(82, secondReset)], settings, afterFirstReset)).Threshold);
     }
 
     [Fact]
@@ -133,7 +197,7 @@ public sealed class NotificationDeciderTests
     {
         var decider = new NotificationDecider();
         var snapshot = new UsageSnapshot(
-            ProviderKeys.Gemini,
+            ProviderKeys.OpenCode,
             Now,
             primary: new RateWindow(10, TimeSpan.FromHours(5), Now.AddHours(2)),
             extraWindows:
@@ -141,7 +205,7 @@ public sealed class NotificationDeciderTests
                 new NamedRateWindow("flash-lite", "Flash Lite", new RateWindow(97, TimeSpan.FromDays(1), Now.AddHours(4))),
             ]);
 
-        var state = new ProviderState(ProviderKeys.Gemini, "Gemini", snapshot);
+        var state = new ProviderState(ProviderKeys.OpenCode, "OpenCode", snapshot);
         var notification = Assert.Single(decider.Evaluate([state], Defaults, Now));
 
         Assert.Equal("Flash Lite", notification.WindowTitle);
@@ -191,15 +255,20 @@ public sealed class NotificationDeciderTests
     private static IReadOnlyList<UsageNotification> Evaluate(
         NotificationDecider decider,
         double session,
-        DateTimeOffset? resetsAt = null) =>
-        decider.Evaluate([State(session, resetsAt)], Defaults, Now);
+        DateTimeOffset? resetsAt = null,
+        DateTimeOffset? at = null,
+        string? lane = null) =>
+        decider.Evaluate([State(session, resetsAt, lane)], Defaults, at ?? Now);
 
-    private static ProviderState State(double session, DateTimeOffset? resetsAt = null) =>
+    private static ProviderState State(double session, DateTimeOffset? resetsAt = null, string? lane = null) =>
         new(
             ProviderKeys.Codex,
             "Codex",
             new UsageSnapshot(
                 ProviderKeys.Codex,
                 Now,
-                primary: new RateWindow(session, TimeSpan.FromHours(5), resetsAt ?? Now.AddHours(3))));
+                primary: new RateWindow(session, TimeSpan.FromHours(5), resetsAt ?? Now.AddHours(3)),
+                extraWindows: lane is null
+                    ? null
+                    : [new NamedRateWindow(lane, lane, new RateWindow(session, TimeSpan.FromDays(7), resetsAt))]));
 }

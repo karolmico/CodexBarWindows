@@ -1,8 +1,0 @@
-{
-  "access_token": "test-gemini-token",
-  "refresh_token": "test-gemini-refresh",
-  "scope": "openid email https://www.googleapis.com/auth/cloud-platform",
-  "token_type": "Bearer",
-  "id_token": "eyJhbGciOiJub25lIn0.eyJlbWFpbCI6InVzZXJAZXhhbXBsZS5jb20ifQ.",
-  "expiry_date": 1893456000000
-}

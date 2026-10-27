@@ -13,7 +13,6 @@ public sealed class ProviderSetupCatalogTests
         [
             ProviderKeys.Codex,
             ProviderKeys.Claude,
-            ProviderKeys.Gemini,
             ProviderKeys.Copilot,
             ProviderKeys.Cursor,
             ProviderKeys.Antigravity,
@@ -49,17 +48,13 @@ public sealed class ProviderSetupCatalogTests
     }
 
     [Fact]
-    public void Claude_and_gemini_entries_use_their_own_cli_commands()
+    public void Claude_entry_uses_its_own_cli_command()
     {
         var claude = Assert.IsType<ProviderSetup>(ProviderSetupCatalog.Find(ProviderKeys.Claude));
-        var gemini = Assert.IsType<ProviderSetup>(ProviderSetupCatalog.Find(ProviderKeys.Gemini));
 
         Assert.Equal("claude", claude.Command);
         Assert.Equal(@"%USERPROFILE%\.claude\.credentials.json", claude.CredentialsPath);
         Assert.Contains("CLAUDE_CONFIG_DIR", claude.PathNote, StringComparison.Ordinal);
-
-        Assert.Equal("gemini", gemini.Command);
-        Assert.Equal(@"%USERPROFILE%\.gemini\oauth_creds.json", gemini.CredentialsPath);
     }
 
     [Fact]

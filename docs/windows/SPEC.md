@@ -22,7 +22,7 @@ A Windows tray application, `CodexBar.Windows`, built on .NET 9 and WPF, that:
 - starts with Windows (opt-in) and enforces a single instance;
 - exposes the same data through `codexbar usage --format json` for scripting.
 
-Provider coverage is phased. The first release matches the six providers the Linux build exposes: `codex`, `claude`, `cursor`, `gemini`, `copilot`, `antigravity`. `opencode` was added afterwards from the OpenCode Go usage API (ADR 0004). The architecture is provider-agnostic so further providers are additive.
+Provider coverage is phased. The first release matched the six providers the Linux build exposes; `gemini` was retired because Google withdrew individual-account support from `@google/gemini-cli` (ADR 0005), and Gemini quota now comes from Antigravity. `opencode` was added from the OpenCode Go usage API (ADR 0004). Current set: `codex`, `claude`, `copilot`, `cursor`, `antigravity`, `opencode`. The architecture is provider-agnostic so further providers are additive.
 
 ## User Stories
 
@@ -87,7 +87,8 @@ Provider coverage is phased. The first release matches the six providers the Lin
 
 - Codex: `%CODEX_HOME%\auth.json`, falling back to `%USERPROFILE%\.codex\auth.json`; `POST/GET` the ChatGPT backend usage endpoint with the stored bearer token and account header.
 - Claude: `%USERPROFILE%\.claude\.credentials.json` and the Anthropic OAuth usage endpoint.
-- Cursor, Gemini, Copilot, Antigravity: the same credential files/cookies upstream uses, adapted to Windows paths; no browser cookie import in the first release unless a provider has no file-based source. Antigravity also reads quota through the `agy` CLI print report, so it works without the desktop app running (ADR 0003).
+- Cursor, Copilot, Antigravity: the same credential files/cookies upstream uses, adapted to Windows paths; no browser cookie import in the first release unless a provider has no file-based source. Antigravity also reads quota through the `agy` CLI print report, so it works without the desktop app running (ADR 0003), and it is now the only source of Gemini model quota.
+- OpenCode: an API key or the OpenCode CLI sign-in, read from `opencode.db`; the OpenCode Go usage API returns the 5-hour, weekly and monthly meters (ADR 0004).
 - Credentials are read-only from the app's point of view: the app never writes provider credential files.
 
 ### Persistence and lifecycle

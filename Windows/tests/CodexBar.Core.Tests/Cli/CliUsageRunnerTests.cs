@@ -56,7 +56,7 @@ public sealed class CliUsageRunnerTests
 
     private sealed class ThrowingProvider : IUsageProvider
     {
-        public ProviderDescriptor Descriptor { get; } = new(ProviderKeys.Gemini, "Gemini");
+        public ProviderDescriptor Descriptor { get; } = new(ProviderKeys.Copilot, "Copilot");
 
         public Task<UsageFetchResult> FetchAsync(CancellationToken cancellationToken) =>
             throw new InvalidOperationException("Boom from a provider.");

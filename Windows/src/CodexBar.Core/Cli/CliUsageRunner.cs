@@ -86,7 +86,7 @@ public static class CliHelp
           -h, --help                 Show this help
           -V, --version              Show the version
 
-        Providers: codex, claude, gemini, copilot, cursor, antigravity
+        Providers: codex, claude, copilot, cursor, antigravity, opencode
         Exit codes: 0 success, 1 partial failure, 2 total failure, 64 usage error
         """;
 

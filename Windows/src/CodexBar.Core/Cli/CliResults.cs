@@ -73,7 +73,6 @@ public static class CliSources
         {
             "codex" => "codex-cli",
             "claude" => "claude-cli",
-            "gemini" => "gemini-cli",
             "copilot" => "gh-cli",
             "cursor" => "cursor-app",
             "antigravity" => "antigravity-app",

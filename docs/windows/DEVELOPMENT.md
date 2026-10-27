@@ -55,6 +55,7 @@ scratch copy instead:
 $repo = (Get-Location).Path
 $work = "$env:LOCALAPPDATA\CodexBar\build\src"
 $out  = "$env:LOCALAPPDATA\CodexBar\publish\win-x64"
+Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 robocopy $repo $work /E /XD .git bin obj .scratch TestResults /NFL /NDL /NJH /NJS
 dotnet publish "$work\Windows\src\CodexBar.Windows\CodexBar.Windows.csproj" `
   -c Release -r win-x64 --self-contained true -p:UseAppHost=true -o $out
@@ -106,13 +107,12 @@ tests cannot drift:
 | --- | --- | --- |
 | Codex | `codex login` | `%USERPROFILE%\.codex\auth.json`, or `%CODEX_HOME%\auth.json` when set |
 | Claude | `claude`, then `/login` | `%USERPROFILE%\.claude\.credentials.json`, or `%CLAUDE_CONFIG_DIR%` when set |
-| Gemini | `gemini` | `%USERPROFILE%\.gemini\oauth_creds.json` |
 | Copilot | `gh auth login`, or a saved token | saved token, then `GITHUB_TOKEN`/`GH_TOKEN`, then `gh auth token` |
 | Cursor | sign in to the Cursor app | `%APPDATA%\Cursor\User\globalStorage\state.vscdb`, then `%USERPROFILE%\.cursor\auth.json` |
-| Antigravity | sign in to Antigravity | its local language server; no token exists |
+| Antigravity | sign in to Antigravity | its local language server, or the `agy` CLI print report; no token exists |
+| OpenCode | `opencode auth login`, or a saved key | saved key, then `OPENCODE_API_KEY`, then `opencode.db` |
 
-Copilot is the only provider that accepts a token pasted into CodexBar, because it is the only
-provider whose API this app can call with one. The token is encrypted with Windows DPAPI
+Copilot and OpenCode accept a token pasted into CodexBar, because their APIs can be called with one. The token is encrypted with Windows DPAPI
 (current-user scope), written atomically to `%APPDATA%\CodexBar\provider-credentials.dat`, and never
 stored in `settings.json`. The file holds no plain text; a corrupt, foreign, or undecryptable file
 behaves exactly like "no token saved", and the setup window can clear it. The tray and

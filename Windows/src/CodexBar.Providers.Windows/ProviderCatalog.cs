@@ -5,7 +5,6 @@ using CodexBar.Core.Providers.Claude;
 using CodexBar.Core.Providers.Codex;
 using CodexBar.Core.Providers.Copilot;
 using CodexBar.Core.Providers.Cursor;
-using CodexBar.Core.Providers.Gemini;
 using CodexBar.Core.Providers.OpenCode;
 
 namespace CodexBar.Providers.Windows;
@@ -24,7 +23,6 @@ public static class ProviderCatalog
         [
             new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(httpClient)),
             new ClaudeProvider(new ClaudeAuthFileStore(), new ClaudeUsageClient(httpClient)),
-            new GeminiProvider(new GeminiAuthFileStore(), new GeminiUsageClient(httpClient)),
             new CopilotProvider(
                 new CopilotTokenSource(tokenStore: tokenStore),
                 new CopilotUsageClient(httpClient)),

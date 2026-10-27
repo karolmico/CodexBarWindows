@@ -4,7 +4,7 @@ Terms below are the vocabulary used in specs, tickets, code, and tests. Prefer t
 
 ## Provider
 
-A metered AI service the app reports on (Codex, Claude, Cursor, Gemini, Copilot, Antigravity). Identified by a `ProviderKey` such as `codex`.
+A metered AI service the app reports on (Codex, Claude, Copilot, Cursor, Antigravity, OpenCode). Identified by a `ProviderKey` such as `codex`.
 
 ## ProviderKey
 
