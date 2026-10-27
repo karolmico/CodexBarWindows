@@ -42,6 +42,16 @@ docs/*-analysis.md
 docs/.viewport-audit/
 docs/.astro/
 
+# .NET (Windows port)
+bin/
+obj/
+*.user
+*.suo
+.vs/
+artifacts/
+publish/
+TestResults/
+
 # Swift Package Manager metadata (leave sources tracked)
 # Packages/
 # Package.resolved
