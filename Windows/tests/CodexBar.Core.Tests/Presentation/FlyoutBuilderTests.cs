@@ -24,18 +24,45 @@ public sealed class FlyoutBuilderTests
 
         var card = Assert.Single(model.Providers);
         Assert.Equal("Codex", card.Name);
+        Assert.Equal("codex", card.Key);
         Assert.Equal("Plus", card.Plan);
         Assert.Null(card.Status);
+        Assert.Equal(FlyoutStatusKind.Ok, card.StatusKind);
         Assert.Equal(["Session", "Weekly", "Flash Lite"], card.Windows.Select(window => window.Title));
         Assert.Equal(42d, card.Windows[0].UsedPercent);
         Assert.Equal("42% used", card.Windows[0].UsageText);
-        Assert.StartsWith("resets in", card.Windows[0].ResetText, StringComparison.Ordinal);
-        Assert.False(card.IsError);
+        Assert.StartsWith("Resets in", card.Windows[0].ResetText, StringComparison.Ordinal);
+        Assert.False(card.IsHighlighted);
+        Assert.Equal("Configure…", card.SetupLabel);
         Assert.StartsWith("Updated ", model.FooterText, StringComparison.Ordinal);
     }
 
     [Fact]
-    public void Error_with_a_cached_snapshot_keeps_the_windows_and_shows_the_status()
+    public void A_tab_carries_a_mark_an_accent_and_a_freshness_line()
+    {
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Antigravity, "Antigravity", TestSnapshots.Codex(Now))],
+            Now,
+            isRefreshing: false).Providers);
+
+        Assert.False(string.IsNullOrWhiteSpace(card.IconPath));
+        Assert.Matches("^#[0-9A-F]{6}$", card.Accent);
+        Assert.Equal("Updated just now", card.UpdatedText);
+    }
+
+    [Fact]
+    public void An_old_snapshot_counts_its_age()
+    {
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Codex, "Codex", TestSnapshots.Codex(Now.AddHours(-2)))],
+            Now,
+            isRefreshing: false).Providers);
+
+        Assert.Equal("Updated 2h ago", card.UpdatedText);
+    }
+
+    [Fact]
+    public void Error_with_a_cached_snapshot_keeps_the_windows_and_warns()
     {
         var snapshot = TestSnapshots.Claude(Now.AddMinutes(-10), session: 90, weekly: 30);
 
@@ -45,8 +72,9 @@ public sealed class FlyoutBuilderTests
             isRefreshing: false).Providers);
 
         Assert.Equal(2, card.Windows.Count);
-        Assert.True(card.IsError);
+        Assert.Equal(FlyoutStatusKind.Warning, card.StatusKind);
         Assert.Equal("sign-in required", card.Status);
+        Assert.Equal("Configure…", card.SetupLabel);
     }
 
     [Fact]
@@ -61,7 +89,7 @@ public sealed class FlyoutBuilderTests
 
         Assert.Empty(card.Windows);
         Assert.Equal("No quota reported", card.Status);
-        Assert.False(card.IsError);
+        Assert.Equal(FlyoutStatusKind.Warning, card.StatusKind);
     }
 
     [Fact]
@@ -73,7 +101,9 @@ public sealed class FlyoutBuilderTests
             isRefreshing: false).Providers);
 
         Assert.Equal("not configured", card.Status);
-        Assert.True(card.IsError);
+        Assert.Equal(FlyoutStatusKind.Error, card.StatusKind);
+        Assert.Equal("Add account…", card.SetupLabel);
+        Assert.Equal("Not available", card.UpdatedText);
         Assert.Empty(card.Windows);
     }
 
@@ -135,5 +165,86 @@ public sealed class FlyoutBuilderTests
 
         Assert.Empty(card.Windows);
         Assert.Equal("Cursor Pro", card.Plan);
+    }
+
+    [Fact]
+    public void Pace_compares_usage_with_the_elapsed_share_of_the_window()
+    {
+        // Five-hour window with three hours left: 40% elapsed, so 42% used is on track.
+        Assert.Equal(
+            "Pace: on track · lasts to reset",
+            FlyoutBuilder.DescribePace(new RateWindow(42, TimeSpan.FromHours(5), Now.AddHours(3)), Now));
+
+        // Same window at 90% used runs hot.
+        Assert.Equal(
+            "Pace: ahead (+50%) · runs out early",
+            FlyoutBuilder.DescribePace(new RateWindow(90, TimeSpan.FromHours(5), Now.AddHours(3)), Now));
+
+        // Well under the elapsed share is comfortable.
+        Assert.Equal(
+            "Pace: behind (-30%) · lasts to reset",
+            FlyoutBuilder.DescribePace(new RateWindow(10, TimeSpan.FromHours(5), Now.AddHours(3)), Now));
+    }
+
+    [Fact]
+    public void Pace_stays_silent_when_the_window_cannot_be_paced()
+    {
+        var duration = TimeSpan.FromHours(5);
+
+        Assert.Null(FlyoutBuilder.DescribePace(new RateWindow(42, resetsAt: Now.AddHours(3)), Now));
+        Assert.Null(FlyoutBuilder.DescribePace(new RateWindow(42, duration), Now));
+        Assert.Null(FlyoutBuilder.DescribePace(null, Now));
+
+        // A window that has only just started, or is about to end, is a sliding estimate on some
+        // providers; a pace line there would be noise.
+        Assert.Null(FlyoutBuilder.DescribePace(new RateWindow(42, duration, Now.Add(duration)), Now));
+        Assert.Null(FlyoutBuilder.DescribePace(new RateWindow(42, duration, Now.AddMinutes(5)), Now));
+    }
+
+    [Fact]
+    public void Windows_are_paced_in_the_detail_pane()
+    {
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Codex, "Codex", TestSnapshots.Codex(Now, session: 42, weekly: 61))],
+            Now,
+            isRefreshing: false).Providers);
+
+        Assert.Equal("Pace: on track · lasts to reset", card.Windows[0].PaceText);
+        Assert.True(card.HasPace);
+    }
+
+    [Fact]
+    public void Shipped_providers_have_a_dashboard_or_a_status_page()
+    {
+        foreach (var key in new[]
+                 {
+                     ProviderKeys.Codex, ProviderKeys.Claude, ProviderKeys.Copilot,
+                     ProviderKeys.Cursor, ProviderKeys.Antigravity, ProviderKeys.OpenCode,
+                 })
+        {
+            var links = ProviderLinks.For(key);
+            Assert.True(links.HasDashboard || links.HasStatusPage, $"No links for {key.Value}");
+            Assert.DoesNotContain(" ", links.DashboardUrl ?? string.Empty, StringComparison.Ordinal);
+        }
+
+        Assert.True(ProviderLinks.For(ProviderKeys.Codex).HasDashboard);
+        Assert.False(ProviderLinks.For(ProviderKeys.OpenCode).HasStatusPage);
+        Assert.False(ProviderLinks.For(ProviderKey.Parse("retired-provider")).HasDashboard);
+    }
+
+    [Fact]
+    public void Every_shipped_provider_gets_a_distinct_mark()
+    {
+        var visuals = new[]
+            {
+                ProviderKeys.Codex, ProviderKeys.Claude, ProviderKeys.Copilot,
+                ProviderKeys.Cursor, ProviderKeys.Antigravity, ProviderKeys.OpenCode,
+            }
+            .Select(ProviderVisuals.For)
+            .ToArray();
+
+        Assert.All(visuals, visual => Assert.False(string.IsNullOrWhiteSpace(visual.IconPath)));
+        Assert.Equal(visuals.Length, visuals.Select(visual => visual.IconPath).Distinct().Count());
+        Assert.Equal(visuals.Length, visuals.Select(visual => visual.Accent).Distinct().Count());
     }
 }

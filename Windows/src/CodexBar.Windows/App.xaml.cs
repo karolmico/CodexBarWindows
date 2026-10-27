@@ -200,8 +200,11 @@ public partial class App : Application
             providerKey));
         window.RefreshRequested += (_, _) => _ = this.RefreshAsync();
         window.SettingsRequested += (_, _) => this.ShowSettings();
+        window.AboutRequested += (_, _) => this.ShowAbout();
+        window.ExitRequested += (_, _) => this.Shutdown();
         window.DiagnosticsRequested += (_, _) => this.CopyDiagnostics(window);
         window.ProviderSetupRequested += (_, key) => this.ShowProviderSetup(key);
+        window.LinkRequested += (_, url) => OpenLink(url, this.logStore);
         window.Closed += (_, _) =>
         {
             if (ReferenceEquals(this.flyout, window))
@@ -409,6 +412,39 @@ public partial class App : Application
         this.coordinator.ApplyCached(cached);
         this.Render();
         _ = this.RefreshAsync();
+    }
+
+    /// <summary>Version, identity, and where to report a problem; reachable from the flyout menu.</summary>
+    private void ShowAbout() =>
+        MessageBox.Show(
+            $"CodexBar {AppVersion()}\n\n"
+            + "Ambient AI subscription usage in the notification area.\n"
+            + "https://github.com/karolmico/CodexBarWindows",
+            "About CodexBar",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+
+    /// <summary>Opens a provider page in the default browser; a failed launch stays in the log.</summary>
+    private static void OpenLink(string url, RollingLogStore? logStore)
+    {
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            || (uri.Scheme != Uri.UriSchemeHttps && uri.Scheme != Uri.UriSchemeHttp))
+        {
+            logStore?.Warn($"Refused to open a non-web link: {url}");
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(uri.AbsoluteUri)
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            logStore?.Warn($"Could not open {uri.Host}: {exception.Message}");
+        }
     }
 
     /// <summary>

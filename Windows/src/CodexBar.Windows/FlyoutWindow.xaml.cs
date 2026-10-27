@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -9,13 +10,15 @@ using CodexBar.Core.Presentation;
 namespace CodexBar.Windows;
 
 /// <summary>
-/// Borderless flyout anchored above the notification area. It only renders a <see cref="FlyoutModel"/>;
-/// refresh and settings intentions leave through events so the composition root stays in charge.
+/// Borderless flyout anchored above the notification area. It renders a <see cref="FlyoutModel"/>
+/// through <see cref="FlyoutViewModel"/>, which owns the selected tab; refresh, settings, and setup
+/// intentions leave through events so the composition root stays in charge.
 /// </summary>
 public partial class FlyoutWindow : Window
 {
     private const double ScreenMargin = 8;
     private readonly DispatcherTimer diagnosticsTimer = new() { Interval = TimeSpan.FromSeconds(4) };
+    private readonly FlyoutViewModel viewModel;
     private bool isClosing;
 
     public FlyoutWindow(FlyoutModel model)
@@ -23,8 +26,8 @@ public partial class FlyoutWindow : Window
         ArgumentNullException.ThrowIfNull(model);
 
         this.InitializeComponent();
-        this.DataContext = model;
-        this.Loaded += (_, _) => this.FocusHighlightedCard();
+        this.viewModel = new FlyoutViewModel(model);
+        this.DataContext = this.viewModel;
         this.diagnosticsTimer.Tick += (_, _) =>
         {
             this.diagnosticsTimer.Stop();
@@ -36,10 +39,17 @@ public partial class FlyoutWindow : Window
 
     public event EventHandler? SettingsRequested;
 
+    public event EventHandler? AboutRequested;
+
+    public event EventHandler? ExitRequested;
+
     public event EventHandler? DiagnosticsRequested;
 
-    /// <summary>Raised with a provider key when the user asks to connect a provider that failed.</summary>
+    /// <summary>Raised with a provider key when the user asks to configure the selected provider.</summary>
     public event EventHandler<string>? ProviderSetupRequested;
+
+    /// <summary>Raised with an absolute http(s) address the user asked to open.</summary>
+    public event EventHandler<string>? LinkRequested;
 
     /// <summary>Inline confirmation for the copy action; no toast dependency, so it always shows.</summary>
     public void ShowDiagnosticsStatus(string message, bool isError)
@@ -51,10 +61,11 @@ public partial class FlyoutWindow : Window
         this.diagnosticsTimer.Start();
     }
 
+    /// <summary>Re-projects provider state without losing the tab the user is reading.</summary>
     public void Update(FlyoutModel model)
     {
         ArgumentNullException.ThrowIfNull(model);
-        this.DataContext = model;
+        this.viewModel.Apply(model);
     }
 
     /// <summary>
@@ -88,16 +99,36 @@ public partial class FlyoutWindow : Window
         this.Top = top;
     }
 
+    private void OnSelectProvider(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: string key })
+        {
+            this.viewModel.Select(key);
+        }
+    }
+
     private void OnRefresh(object sender, RoutedEventArgs e)
     {
-        this.RefreshRequested?.Invoke(this, EventArgs.Empty);
         this.CloseOnce();
+        this.RefreshRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnSettings(object sender, RoutedEventArgs e)
     {
-        this.SettingsRequested?.Invoke(this, EventArgs.Empty);
         this.CloseOnce();
+        this.SettingsRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnAbout(object sender, RoutedEventArgs e)
+    {
+        this.CloseOnce();
+        this.AboutRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void OnQuit(object sender, RoutedEventArgs e)
+    {
+        this.CloseOnce();
+        this.ExitRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnConfigureProvider(object sender, RoutedEventArgs e)
@@ -113,16 +144,41 @@ public partial class FlyoutWindow : Window
         this.ProviderSetupRequested?.Invoke(this, key);
     }
 
+    private void OnOpenDashboard(object sender, RoutedEventArgs e) =>
+        this.Open(this.viewModel.Selected?.Links.DashboardUrl);
+
+    private void OnOpenStatusPage(object sender, RoutedEventArgs e) =>
+        this.Open(this.viewModel.Selected?.Links.StatusUrl);
+
     private void OnCopyDiagnostics(object sender, RoutedEventArgs e) =>
         this.DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
+
+    private void Open(string? url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return;
+        }
+
+        this.CloseOnce();
+        this.LinkRequested?.Invoke(this, url);
+    }
 
     private void OnDeactivated(object? sender, EventArgs e) => this.CloseOnce();
 
     private void OnKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.Key == Key.Escape)
+        switch (e.Key)
         {
-            this.CloseOnce();
+            case Key.Escape:
+                this.CloseOnce();
+                break;
+            case Key.Left:
+                e.Handled = this.viewModel.SelectAdjacent(-1);
+                break;
+            case Key.Right:
+                e.Handled = this.viewModel.SelectAdjacent(1);
+                break;
         }
     }
 
@@ -148,23 +204,6 @@ public partial class FlyoutWindow : Window
 
         this.isClosing = true;
         this.Close();
-    }
-
-    private void FocusHighlightedCard()
-    {
-        if (this.DataContext is not FlyoutModel model
-            || model.Providers.FirstOrDefault(static provider => provider.IsHighlighted) is not { } highlighted)
-        {
-            return;
-        }
-
-        if (this.FindName("ProviderList") is FrameworkElement list
-            && list is System.Windows.Controls.ItemsControl items
-            && items.ItemContainerGenerator.ContainerFromItem(highlighted) is FrameworkElement container)
-        {
-            container.BringIntoView();
-            container.Focus();
-        }
     }
 
     private static Point CursorPosition()
