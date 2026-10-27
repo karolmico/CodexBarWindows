@@ -30,7 +30,7 @@ public sealed class FlyoutBuilderTests
         Assert.Equal(FlyoutStatusKind.Ok, card.StatusKind);
         Assert.Equal(["Session", "Weekly", "Flash Lite"], card.Windows.Select(window => window.Title));
         Assert.Equal(42d, card.Windows[0].UsedPercent);
-        Assert.Equal("42% used", card.Windows[0].UsageText);
+        Assert.Equal("42% used · 58% left", card.Windows[0].UsageText);
         Assert.StartsWith("Resets in", card.Windows[0].ResetText, StringComparison.Ordinal);
         Assert.False(card.IsHighlighted);
         Assert.Equal("Configure…", card.SetupLabel);
@@ -165,6 +165,86 @@ public sealed class FlyoutBuilderTests
 
         Assert.Empty(card.Windows);
         Assert.Equal("Cursor Pro", card.Plan);
+    }
+
+    [Fact]
+    public void Every_lane_states_used_and_left_so_the_native_remaining_view_matches()
+    {
+        // Antigravity's own window shows "0% remaining"; the flyout must read the same way.
+        var snapshot = new UsageSnapshot(
+            ProviderKeys.Antigravity,
+            Now,
+            primary: new RateWindow(100, TimeSpan.FromHours(5), Now.AddHours(1)));
+
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Antigravity, "Antigravity", snapshot)],
+            Now,
+            isRefreshing: false).Providers);
+
+        Assert.Equal("100% used · 0% left", card.Windows[0].UsageText);
+        Assert.True(card.Windows[0].IsExhausted);
+    }
+
+    [Fact]
+    public void A_disabled_lane_stays_visible_with_the_providers_reason()
+    {
+        var snapshot = new UsageSnapshot(
+            ProviderKeys.Antigravity,
+            Now,
+            primary: new RateWindow(100, TimeSpan.FromHours(5), Now.AddHours(1)),
+            extraWindows:
+            [
+                new NamedRateWindow(
+                    "antigravity-claude-gpt-5h",
+                    "Claude/GPT 5-hour",
+                    new RateWindow(
+                        0,
+                        TimeSpan.FromHours(5),
+                        isDisabled: true,
+                        disabledReason: "You have hit your weekly limit, the 5-hour limit does not currently apply."),
+                    usageKnown: false),
+            ]);
+
+        var card = Assert.Single(FlyoutBuilder.Build(
+            [new ProviderState(ProviderKeys.Antigravity, "Antigravity", snapshot)],
+            Now,
+            isRefreshing: false).Providers);
+
+        var lane = Assert.Single(card.Windows, window => window.IsDisabled);
+        Assert.Equal("Claude/GPT 5-hour", lane.Title);
+        Assert.Equal("Disabled", lane.UsageText);
+        Assert.StartsWith("You have hit your weekly limit", lane.NoteText, StringComparison.Ordinal);
+        Assert.False(lane.ShowBar);
+        Assert.False(lane.IsExhausted);
+        Assert.Null(lane.PaceText);
+        Assert.Equal(string.Empty, lane.ResetText);
+    }
+
+    [Fact]
+    public void A_disabled_lane_without_a_reason_still_says_it_is_disabled()
+    {
+        var snapshot = new UsageSnapshot(
+            ProviderKeys.Antigravity,
+            Now,
+            primary: new RateWindow(10, TimeSpan.FromHours(5), Now.AddHours(1)),
+            extraWindows:
+            [
+                new NamedRateWindow(
+                    "antigravity-claude-gpt-5h",
+                    "Claude/GPT 5-hour",
+                    new RateWindow(0, isDisabled: true),
+                    usageKnown: false),
+            ]);
+
+        var lane = Assert.Single(
+            Assert.Single(FlyoutBuilder.Build(
+                [new ProviderState(ProviderKeys.Antigravity, "Antigravity", snapshot)],
+                Now,
+                isRefreshing: false).Providers).Windows,
+            window => window.IsDisabled);
+
+        Assert.Equal("Disabled", lane.UsageText);
+        Assert.Null(lane.NoteText);
     }
 
     [Fact]

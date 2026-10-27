@@ -75,6 +75,17 @@ public static class CliTextRenderer
 
         foreach (var extra in snapshot.ExtraWindows)
         {
+            if (extra.Window.IsDisabled)
+            {
+                lines.Add($"{extra.Title}: Disabled");
+                if (extra.Window.DisabledReason is { } reason)
+                {
+                    lines.Add(reason);
+                }
+
+                continue;
+            }
+
             if (!extra.UsageKnown)
             {
                 lines.Add($"{extra.Title}: Unavailable");

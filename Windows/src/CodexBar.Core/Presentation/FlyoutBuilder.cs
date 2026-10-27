@@ -20,7 +20,7 @@ public enum FlyoutStatusKind
     Unknown,
 }
 
-/// <summary>One quota bar in the selected provider's detail pane.</summary>
+/// <summary>One quota lane in the selected provider's detail pane.</summary>
 public sealed record FlyoutWindowModel(
     string Title,
     double UsedPercent,
@@ -28,7 +28,13 @@ public sealed record FlyoutWindowModel(
     string ResetText,
     bool IsExhausted,
     string? PaceText,
-    string Accent);
+    string Accent,
+    bool IsDisabled = false,
+    string? NoteText = null)
+{
+    /// <summary>A disabled lane has no meaningful fill, so its bar is hidden instead of drawn at zero.</summary>
+    public bool ShowBar => !this.IsDisabled;
+}
 
 /// <summary>One provider: its tab in the switcher and the detail pane shown when it is selected.</summary>
 public sealed record FlyoutProviderModel(
@@ -155,7 +161,7 @@ public static class FlyoutBuilder
             AddWindow(windows, "Weekly", snapshot.Secondary, now, visual.Accent);
             foreach (var extra in snapshot.ExtraWindows)
             {
-                if (extra.UsageKnown || extra.Window.ResetsAt is not null
+                if (extra.UsageKnown || extra.Window.IsDisabled || extra.Window.ResetsAt is not null
                     || !string.IsNullOrWhiteSpace(extra.Window.ResetDescription))
                 {
                     AddWindow(windows, extra.Title, extra.Window, now, visual.Accent);
@@ -218,21 +224,54 @@ public static class FlyoutBuilder
         DateTimeOffset now,
         string accent)
     {
-        if (window is null || !window.IsMeasured)
+        if (window is null || (!window.IsMeasured && !window.IsDisabled))
         {
             return;
         }
 
+        if (window.IsDisabled)
+        {
+            // The provider still reports the lane, but switched it off. Dropping it silently made the
+            // flyout look like it had lost data, so it stays with the provider's own explanation.
+            windows.Add(new FlyoutWindowModel(
+                title,
+                UsedPercent: 0d,
+                UsageText: "Disabled",
+                ResetText: window.ResetsAt is null
+                    ? string.Empty
+                    : Capitalize(UsageFormatter.FormatReset(window, now)),
+                IsExhausted: false,
+                PaceText: null,
+                accent,
+                IsDisabled: true,
+                NoteText: Truncate(window.DisabledReason, 160)));
+            return;
+        }
+
+        var used = window.UsedPercent;
+        var remaining = Math.Clamp(100d - used, 0d, 100d);
+
         windows.Add(new FlyoutWindowModel(
             title,
-            Math.Clamp(window.UsedPercent, 0d, 100d),
+            Math.Clamp(used, 0d, 100d),
             string.Create(
                 CultureInfo.InvariantCulture,
-                $"{UsageFormatter.FormatPercent(window.UsedPercent)} used"),
+                $"{UsageFormatter.FormatPercent(used)} used · {UsageFormatter.FormatPercent(remaining)} left"),
             Capitalize(UsageFormatter.FormatReset(window, now)),
             window.IsExhausted,
             DescribePace(window, now),
             accent));
+    }
+
+    private static string? Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        return trimmed.Length <= maxLength ? trimmed : string.Concat(trimmed.AsSpan(0, maxLength - 1), "…");
     }
 
     /// <summary>The detail pane starts a line with the reset copy, so it gets a capital letter.</summary>

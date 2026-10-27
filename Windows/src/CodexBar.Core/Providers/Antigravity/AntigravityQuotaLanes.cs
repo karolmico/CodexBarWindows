@@ -16,7 +16,9 @@ internal sealed record AntigravityQuotaLane(
     string Cadence,
     double? RemainingFraction,
     DateTimeOffset? ResetsAt,
-    bool UsageKnown)
+    bool UsageKnown,
+    bool Disabled = false,
+    string? Description = null)
 {
     public string Family => this.GroupName.Contains("gemini", StringComparison.OrdinalIgnoreCase)
         && !this.GroupName.Any(char.IsDigit)
@@ -44,7 +46,12 @@ internal sealed record AntigravityQuotaLane(
             _ => (TimeSpan?)null,
         };
 
-        return new RateWindow(this.UsedPercent, window, this.ResetsAt);
+        return new RateWindow(
+            this.UsedPercent,
+            window,
+            this.ResetsAt,
+            isDisabled: this.Disabled,
+            disabledReason: this.Disabled ? this.Description : null);
     }
 }
 

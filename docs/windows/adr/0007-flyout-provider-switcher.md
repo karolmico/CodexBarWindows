@@ -26,3 +26,11 @@ The model had been deliberately one-way: `FlyoutBuilder` projected state into an
 - Selection is testable without WPF (`FlyoutViewModelTests`), and the projection stays pure (`FlyoutBuilderTests`).
 - Providers with a sliding reset estimate show usage and reset copy but no pace verdict.
 - Adding a provider now also means giving it a mark, an accent, and its links.
+
+## Amendment - percent basis and disabled lanes
+
+Two problems surfaced once the flyout shipped.
+
+**The same number, two languages.** Antigravity's own window reports *remaining* ("Weekly Limit Remaining 0%"), while CodexBar reported *used* ("100% used"). Both were correct, and the user read the pair as a bug. Rather than a per-provider display setting, every lane now states both: `100% used · 0% left`. The macOS `PercentStyle` choice exists because its layout has room for one figure; here the pair costs a few pixels and removes the ambiguity for every provider at once. The CLI already spoke in `left` terms, so the two surfaces now agree.
+
+**A lane that vanished.** Antigravity marks the five-hour bucket `disabled: true` when the weekly limit is exhausted: it is reported, has no usage value, and the old projection dropped it. The payload also carries the provider's own sentence ("You have hit your weekly limit, the 5-hour limit does not currently apply."), so `RateWindow` gained `IsDisabled` and `DisabledReason`, a disabled lane is never measured (it cannot move a threshold, a pace line, or an exhaustion badge), and the flyout shows it with a muted `disabled` chip, the word `Disabled` instead of a bar, and that sentence underneath. The CLI prints `Disabled` plus the same sentence.

@@ -49,6 +49,30 @@ public sealed class RateWindowTests
     }
 
     [Fact]
+    public void A_disabled_lane_is_not_measured_and_never_moves_a_threshold()
+    {
+        var disabled = new RateWindow(
+            100d,
+            TimeSpan.FromHours(5),
+            isDisabled: true,
+            disabledReason: "You have hit your weekly limit, the 5-hour limit does not currently apply.");
+
+        Assert.False(disabled.IsMeasured);
+        Assert.False(disabled.IsExhausted);
+        Assert.Equal(100d, disabled.UsedPercent);
+        Assert.StartsWith("You have hit", disabled.DisabledReason, StringComparison.Ordinal);
+
+        var snapshot = new UsageSnapshot(
+            Providers.ProviderKeys.Antigravity,
+            DateTimeOffset.UnixEpoch,
+            primary: disabled);
+
+        Assert.False(snapshot.HasMeasuredWindows);
+        Assert.Null(snapshot.HighestUsedPercent);
+        Assert.False(snapshot.IsExhausted);
+    }
+
+    [Fact]
     public void Rejects_non_finite_percentages()
     {
         Assert.Throws<ArgumentOutOfRangeException>(() => new RateWindow(double.NaN));

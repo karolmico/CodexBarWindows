@@ -58,7 +58,7 @@ public sealed class FlyoutViewModelTests
 
         viewModel.Apply(Build(claudeUsage: 88));
         Assert.Equal("claude", viewModel.SelectedKey);
-        Assert.Equal("88% used", viewModel.Selected!.Windows[0].UsageText);
+        Assert.Equal("88% used · 12% left", viewModel.Selected!.Windows[0].UsageText);
     }
 
     [Fact]

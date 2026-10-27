@@ -341,7 +341,9 @@ public sealed class AntigravityUsageClient
                 cadence,
                 fraction,
                 reset,
-                !disabled && fraction is not null));
+                !disabled && fraction is not null,
+                disabled,
+                ReadString(bucket, "description")));
         }
     }
 

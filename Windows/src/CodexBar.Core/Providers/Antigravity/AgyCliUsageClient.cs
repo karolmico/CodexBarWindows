@@ -273,7 +273,9 @@ public sealed class AgyCliUsageClient : IAntigravityCliSource
                 cadence,
                 fraction,
                 ParseDate(ReadFirst(bucket, "reset_time", "resetTime")),
-                !disabled && fraction is not null));
+                !disabled && fraction is not null,
+                disabled,
+                ReadFirst(bucket, "description")));
         }
     }
 

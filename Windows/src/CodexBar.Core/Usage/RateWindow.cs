@@ -14,7 +14,9 @@ public sealed record RateWindow
         string? title = null,
         double? quotaLimit = null,
         string? quotaUnit = null,
-        bool isSyntheticPlaceholder = false)
+        bool isSyntheticPlaceholder = false,
+        bool isDisabled = false,
+        string? disabledReason = null)
     {
         if (!double.IsFinite(usedPercent))
         {
@@ -29,6 +31,8 @@ public sealed record RateWindow
         this.QuotaLimit = quotaLimit;
         this.QuotaUnit = quotaUnit;
         this.IsSyntheticPlaceholder = isSyntheticPlaceholder;
+        this.IsDisabled = isDisabled;
+        this.DisabledReason = string.IsNullOrWhiteSpace(disabledReason) ? null : disabledReason.Trim();
     }
 
     public double UsedPercent { get; }
@@ -48,7 +52,17 @@ public sealed record RateWindow
     /// <summary>A window invented for layout stability; it carries no measured value.</summary>
     public bool IsSyntheticPlaceholder { get; }
 
-    public bool IsMeasured => !this.IsSyntheticPlaceholder;
+    /// <summary>
+    /// The provider reports this lane but has switched it off, e.g. Antigravity's five-hour limit while
+    /// the weekly limit is exhausted. It carries no usage value and must never move a threshold, but it
+    /// is still worth showing so a disappearing row does not look like a bug.
+    /// </summary>
+    public bool IsDisabled { get; }
+
+    /// <summary>The provider's own explanation for a disabled lane, when it supplies one.</summary>
+    public string? DisabledReason { get; }
+
+    public bool IsMeasured => !this.IsSyntheticPlaceholder && !this.IsDisabled;
 
     public bool IsExhausted => this.IsMeasured && this.UsedPercent >= 100d;
 

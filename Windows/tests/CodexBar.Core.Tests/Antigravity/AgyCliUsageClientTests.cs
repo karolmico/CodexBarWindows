@@ -42,6 +42,11 @@ public sealed class AgyCliUsageClientTests
             new DateTimeOffset(2026, 10, 27, 19, 56, 5, TimeSpan.Zero),
             extras["antigravity-gemini-gemini-weekly"].Window.ResetsAt);
         Assert.False(extras["antigravity-claude-gpt-3p-5h"].UsageKnown);
+        Assert.True(extras["antigravity-claude-gpt-3p-5h"].Window.IsDisabled);
+        Assert.Contains(
+            "does not currently apply",
+            extras["antigravity-claude-gpt-3p-5h"].Window.DisabledReason,
+            StringComparison.Ordinal);
         Assert.Equal("Gemini 4 Argon weekly", extras["antigravity-gemini-4-argon-gemini-argon-wtu-weekly"].Title);
         Assert.Equal(0d, extras["antigravity-gemini-4-argon-gemini-argon-wtu-weekly"].Window.UsedPercent);
     }

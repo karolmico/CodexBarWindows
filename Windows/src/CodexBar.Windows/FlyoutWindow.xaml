@@ -227,6 +227,14 @@
                                             Margin="6,0,0,0"
                                             Padding="6,1"
                                             CornerRadius="5"
+                                            Background="#10B45309"
+                                            Visibility="{Binding IsDisabled, Converter={StaticResource BoolToVisibility}}">
+                                        <TextBlock Text="disabled" FontSize="10" Foreground="#92620B" />
+                                    </Border>
+                                    <Border DockPanel.Dock="Right"
+                                            Margin="6,0,0,0"
+                                            Padding="6,1"
+                                            CornerRadius="5"
                                             Background="#14B42318"
                                             Visibility="{Binding IsExhausted, Converter={StaticResource BoolToVisibility}}">
                                         <TextBlock Text="exhausted" FontSize="10" Foreground="#B42318" />
@@ -236,6 +244,7 @@
                                 <ProgressBar Style="{StaticResource PillProgress}"
                                              Margin="0,7,0,0"
                                              Value="{Binding UsedPercent, Mode=OneWay}"
+                                             Visibility="{Binding ShowBar, Converter={StaticResource BoolToVisibility}}"
                                              Foreground="{Binding Accent, Converter={StaticResource HexBrush}}" />
 
                                 <DockPanel LastChildFill="False" Margin="0,6,0,0">
@@ -243,7 +252,8 @@
                                     <TextBlock DockPanel.Dock="Right"
                                                Text="{Binding ResetText}"
                                                FontSize="11"
-                                               Foreground="#9CA3AF" />
+                                               Foreground="#9CA3AF"
+                                               Visibility="{Binding ResetText, Converter={StaticResource HasValue}}" />
                                 </DockPanel>
 
                                 <TextBlock Text="{Binding PaceText}"
@@ -252,6 +262,13 @@
                                            Foreground="#9CA3AF"
                                            TextTrimming="CharacterEllipsis"
                                            Visibility="{Binding PaceText, Converter={StaticResource HasValue}}" />
+
+                                <TextBlock Text="{Binding NoteText}"
+                                           Margin="0,3,0,0"
+                                           FontSize="11"
+                                           Foreground="#9CA3AF"
+                                           TextWrapping="Wrap"
+                                           Visibility="{Binding NoteText, Converter={StaticResource HasValue}}" />
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
