@@ -1,0 +1,9 @@
+{
+  "account_id": "acct_123",
+  "rate_limit": {
+    "primary_window": {
+      "used_percent": "high",
+      "reset_at": "never"
+    }
+  }
+}

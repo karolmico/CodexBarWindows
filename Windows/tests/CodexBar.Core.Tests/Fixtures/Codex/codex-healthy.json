@@ -1,0 +1,21 @@
+{
+  "account_id": "acct_123",
+  "plan_type": "plus",
+  "rate_limit": {
+    "primary_window": {
+      "used_percent": 42,
+      "reset_at": 1793102400,
+      "limit_window_seconds": 18000
+    },
+    "secondary_window": {
+      "used_percent": 87,
+      "reset_at": 1793617200,
+      "limit_window_seconds": 604800
+    }
+  },
+  "credits": {
+    "has_credits": true,
+    "unlimited": false,
+    "balance": "12.50"
+  }
+}

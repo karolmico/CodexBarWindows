@@ -6,7 +6,7 @@
 
 **Status:** in-progress
 
-- [x] Launching the app shows one tray icon and no main window (process stays alive without a window; icon visibility not yet visually confirmed on a high-DPI taskbar)
+- [x] Launching the app shows one tray icon and no main window (process stays alive without a window; icon visually identified in the hidden-icons flyout)
 - [x] The context menu reflects the tray menu model from the core, including the empty state and a disabled refresh while empty
 - [x] The tooltip shows the core-generated summary text
 - [x] Exit removes the icon and ends the process; no orphan process remains
