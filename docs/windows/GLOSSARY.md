@@ -85,3 +85,11 @@ The most recent successful snapshot for a provider, kept in the cache and used w
 ## Diagnostics bundle
 
 A redacted text export (versions, enabled provider keys, error kinds, timings) safe to attach to a bug report.
+
+## agy
+
+The Antigravity CLI (`agy.exe`). Two roles: it owns the user's Antigravity sign-in, and its one-shot print report (`agy -p "/usage" --output-format json`) is the quota source used when the desktop app is closed. Not to be confused with the app's own `language_server`.
+
+## CLI fallback
+
+A provider source used only when the primary source cannot answer. For Antigravity, the `agy` print report is the fallback for a closed, untokened, or failing desktop app.

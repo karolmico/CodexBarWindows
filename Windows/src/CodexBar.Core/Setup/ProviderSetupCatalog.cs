@@ -155,12 +155,13 @@ public static class ProviderSetupCatalog
         new(
             ProviderKeys.Antigravity,
             "Antigravity",
-            "CodexBar asks the Antigravity language server running on this PC for quota. No token is stored.",
+            "CodexBar asks the Antigravity language server for quota, and reads it through the Antigravity CLI (`agy`) when the app is closed. No token is stored.",
             [
-                "Open Antigravity and sign in.",
-                "Keep it running; CodexBar reads usage from its local language server.",
+                "Sign in once: run `agy` in a terminal and finish the login.",
+                "Optional: keep the Antigravity app running; CodexBar then reads its local language server.",
                 "Return here and choose Check connection.",
             ],
+            command: "agy",
             helpUrl: "https://antigravity.google",
             helpLabel: "Open Antigravity"),
     ];

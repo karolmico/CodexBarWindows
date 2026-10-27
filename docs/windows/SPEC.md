@@ -87,7 +87,7 @@ Provider coverage is phased. The first release matches the six providers the Lin
 
 - Codex: `%CODEX_HOME%\auth.json`, falling back to `%USERPROFILE%\.codex\auth.json`; `POST/GET` the ChatGPT backend usage endpoint with the stored bearer token and account header.
 - Claude: `%USERPROFILE%\.claude\.credentials.json` and the Anthropic OAuth usage endpoint.
-- Cursor, Gemini, Copilot, Antigravity: the same credential files/cookies upstream uses, adapted to Windows paths; no browser cookie import in the first release unless a provider has no file-based source.
+- Cursor, Gemini, Copilot, Antigravity: the same credential files/cookies upstream uses, adapted to Windows paths; no browser cookie import in the first release unless a provider has no file-based source. Antigravity also reads quota through the `agy` CLI print report, so it works without the desktop app running (ADR 0003).
 - Credentials are read-only from the app's point of view: the app never writes provider credential files.
 
 ### Persistence and lifecycle

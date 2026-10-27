@@ -262,20 +262,20 @@ public sealed class AntigravityUsageClient
                 return (null, ParseError());
             }
 
-            var windows = new List<QuotaWindow>();
+            var lanes = new List<AntigravityQuotaLane>();
             foreach (var group in groups.EnumerateArray())
             {
-                ReadGroup(group, windows);
+                ReadGroup(group, lanes);
             }
 
-            if (windows.Count == 0 || !windows.Any(static window => window.UsageKnown))
+            if (lanes.Count == 0 || !lanes.Any(static lane => lane.UsageKnown))
             {
                 return (null, new ProviderError(
                     ProviderErrorKind.Parse,
                     "Antigravity reported no usable quota buckets. Will retry shortly."));
             }
 
-            return (BuildSnapshot(windows, now), null);
+            return (AntigravityQuotaSnapshot.Build(lanes, now), null);
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException
             or FormatException or ArgumentOutOfRangeException)
@@ -298,7 +298,7 @@ public sealed class AntigravityUsageClient
         return payload.TryGetProperty("groups", out _);
     }
 
-    private static void ReadGroup(JsonElement group, List<QuotaWindow> windows)
+    private static void ReadGroup(JsonElement group, List<AntigravityQuotaLane> lanes)
     {
         if (group.ValueKind != JsonValueKind.Object)
         {
@@ -329,9 +329,12 @@ public sealed class AntigravityUsageClient
             var disabled = bucket.TryGetProperty("disabled", out var flag)
                 && flag.ValueKind == JsonValueKind.True;
             var reset = ParseDate(ReadString(bucket, "resetTime"));
-            var cadence = ClassifyCadence(bucket, bucketId, bucketName);
+            var cadence = AntigravityQuotaSnapshot.ClassifyCadence(
+                ReadString(bucket, "window"),
+                bucketId,
+                bucketName);
 
-            windows.Add(new QuotaWindow(
+            lanes.Add(new AntigravityQuotaLane(
                 groupName,
                 bucketId,
                 bucketName,
@@ -340,87 +343,6 @@ public sealed class AntigravityUsageClient
                 reset,
                 !disabled && fraction is not null));
         }
-    }
-
-    private static UsageSnapshot BuildSnapshot(List<QuotaWindow> windows, DateTimeOffset now)
-    {
-        var ranked = windows
-            .Where(static window => window.UsageKnown)
-            .OrderByDescending(static window => window.UsedPercent)
-            .ToList();
-
-        var gemini = ranked.FirstOrDefault(static window => window.Family == "Gemini");
-        var claudeGpt = ranked.FirstOrDefault(static window => window.Family == "Claude/GPT");
-        var primaryWindow = gemini ?? ranked[0];
-        var secondaryWindow = claudeGpt is not null && !ReferenceEquals(claudeGpt, primaryWindow)
-            ? claudeGpt
-            : null;
-
-        var extras = new List<NamedRateWindow>();
-        foreach (var window in windows)
-        {
-            if (ReferenceEquals(window, primaryWindow) || ReferenceEquals(window, secondaryWindow))
-            {
-                continue;
-            }
-
-            extras.Add(new NamedRateWindow(
-                string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"antigravity-{Slug(window.Family)}-{Slug(window.BucketId)}"),
-                window.Title,
-                window.ToRateWindow(),
-                window.UsageKnown));
-        }
-
-        return new UsageSnapshot(
-            ProviderKeys.Antigravity,
-            now,
-            primaryWindow.ToRateWindow(),
-            secondaryWindow?.ToRateWindow(),
-            extras);
-    }
-
-    private static string Slug(string value)
-    {
-        var characters = value.Trim().ToLowerInvariant()
-            .Select(static character => char.IsAsciiLetterOrDigit(character) ? character : '-')
-            .ToArray();
-        var slug = new string(characters).Trim('-');
-        while (slug.Contains("--", StringComparison.Ordinal))
-        {
-            slug = slug.Replace("--", "-", StringComparison.Ordinal);
-        }
-
-        return slug.Length == 0 ? "quota" : slug;
-    }
-
-    private static string ClassifyCadence(JsonElement bucket, string bucketId, string bucketName)
-    {
-        var explicitWindow = ReadString(bucket, "window")?.Trim().ToLowerInvariant().Replace('_', '-');
-        var candidates = string.IsNullOrEmpty(explicitWindow)
-            ? new[] { bucketId.ToLowerInvariant().Replace('_', '-'), bucketName.ToLowerInvariant().Replace('_', '-') }
-            : [explicitWindow];
-
-        foreach (var candidate in candidates)
-        {
-            var value = candidate.EndsWith(" limit", StringComparison.Ordinal)
-                ? candidate[..^" limit".Length]
-                : candidate;
-            if (value is "session" or "5h" or "5-hour" or "five hour" or "five-hour"
-                || value.EndsWith("-session", StringComparison.Ordinal)
-                || value.EndsWith("-5h", StringComparison.Ordinal))
-            {
-                return "Session";
-            }
-
-            if (value == "weekly" || value.EndsWith("-weekly", StringComparison.Ordinal))
-            {
-                return "Weekly";
-            }
-        }
-
-        return "Other";
     }
 
     private static double? ReadFraction(JsonElement bucket)
@@ -501,43 +423,4 @@ public sealed class AntigravityUsageClient
         new(ProviderErrorKind.Parse, "Could not read the Antigravity quota response. Will retry shortly.", cause: cause);
 
     private static UsageFetchResult Failure(ProviderError error) => new UsageFetchResult.Failure(error);
-
-    private sealed record QuotaWindow(
-        string GroupName,
-        string BucketId,
-        string BucketName,
-        string Cadence,
-        double? RemainingFraction,
-        DateTimeOffset? ResetsAt,
-        bool UsageKnown)
-    {
-        public string Family => this.GroupName.Contains("gemini", StringComparison.OrdinalIgnoreCase)
-            && !this.GroupName.Any(char.IsDigit)
-                ? "Gemini"
-                : this.GroupName.Contains("claude", StringComparison.OrdinalIgnoreCase)
-                    || this.GroupName.Contains("gpt", StringComparison.OrdinalIgnoreCase)
-                        ? "Claude/GPT"
-                        : this.GroupName;
-
-        public string Title => $"{this.Family} {this.Cadence switch
-        {
-            "Session" => "5-hour",
-            "Weekly" => "weekly",
-            _ => this.BucketName,
-        }}";
-
-        public double UsedPercent => Math.Clamp((1d - (this.RemainingFraction ?? 1d)) * 100d, 0d, 200d);
-
-        public RateWindow ToRateWindow()
-        {
-            var window = this.Cadence switch
-            {
-                "Session" => TimeSpan.FromMinutes(300),
-                "Weekly" => TimeSpan.FromMinutes(10080),
-                _ => (TimeSpan?)null,
-            };
-
-            return new RateWindow(this.UsedPercent, window, this.ResetsAt);
-        }
-    }
 }

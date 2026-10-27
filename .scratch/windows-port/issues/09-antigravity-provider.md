@@ -28,3 +28,20 @@
   A closed client (no matching process) is `NotConfigured`, so the tray says "not running".
 - Encrypted local app sessions are not decrypted here: the quota comes from the running language
   server, so the app's own storage is never opened.
+
+## CLI fallback (ticket 14)
+
+- With the desktop app closed, quota comes from `agy -p "/usage" --output-format json
+  --print-timeout 90s` (upstream's print report). `agy` 1.1.11 or newer is required; older builds
+  get a fixed "too old" message.
+- The CLI runs hidden with stdin closed, `AGY_CLI_DISABLE_AUTO_UPDATE=true`, a 60 s timeout that
+  kills the process tree, and `--version` cached once per app run.
+- The app probe still wins when it answers, because it also yields account email and plan. A failed
+  or untokened app probe now falls through to the CLI instead of failing the whole provider.
+- Hand-started `agy` sessions are no longer probed over loopback: every CLI from 1.2.2 rejects
+  tokenless requests, so the probe would only burn a timeout.
+- Lang mapping is shared with the HTTP path (`AntigravityQuotaSnapshot`), so both sources report
+  the same lanes. CLI stderr is classified, never surfaced.
+- Verified live on this machine with `agy` 1.4.8 and no Antigravity process running:
+  `codexbar.exe usage --provider antigravity` returned Gemini 5-hour 22.05 %, Claude/GPT weekly
+  100 %, Gemini weekly 9.06 %.

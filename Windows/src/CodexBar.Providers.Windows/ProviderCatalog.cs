@@ -30,7 +30,8 @@ public static class ProviderCatalog
             new CursorProvider(new CursorSessionStore(), new CursorUsageClient(httpClient)),
             new AntigravityProvider(
                 new WindowsAntigravityProcessSource(),
-                new AntigravityUsageClient(httpClient)),
+                new AntigravityUsageClient(httpClient),
+                new AgyCliUsageClient(new WindowsAgyProcessRunner())),
         ]);
     }
 }
