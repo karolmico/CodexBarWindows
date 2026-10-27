@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <RootNamespace>CodexBar.Cli</RootNamespace>
+    <AssemblyName>codexbar</AssemblyName>
+    <Version>0.1.0</Version>
+    <Product>CodexBar</Product>
+    <Description>Headless usage output for CodexBar.</Description>
+    <!-- Same virtual-drive limitation as the tray app; packaging publishes on a local disk. -->
+    <UseAppHost>false</UseAppHost>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodexBar.Core\CodexBar.Core.csproj" />
+    <ProjectReference Include="..\CodexBar.Providers.Windows\CodexBar.Providers.Windows.csproj" />
+  </ItemGroup>
+</Project>

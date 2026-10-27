@@ -16,13 +16,20 @@ public partial class SettingsWindow : Window
 {
     private readonly ObservableCollection<ProviderRow> rows;
     private readonly IReadOnlyList<int> extraThresholds;
+    private readonly Func<string>? copyDiagnostics;
 
-    public SettingsWindow(AppSettings settings, IReadOnlyList<ProviderDescriptor> providers)
+    public SettingsWindow(
+        AppSettings settings,
+        IReadOnlyList<ProviderDescriptor> providers,
+        Func<string>? copyDiagnostics = null)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(providers);
 
         this.InitializeComponent();
+        this.copyDiagnostics = copyDiagnostics;
+        this.CopyDiagnosticsButton.Visibility =
+            copyDiagnostics is null ? Visibility.Collapsed : Visibility.Visible;
 
         this.rows = new ObservableCollection<ProviderRow>(BuildRows(settings, providers));
         this.ProviderList.ItemsSource = this.rows;
@@ -62,6 +69,21 @@ public partial class SettingsWindow : Window
     private void OnMoveUp(object sender, RoutedEventArgs e) => this.Move(sender, offset: -1);
 
     private void OnMoveDown(object sender, RoutedEventArgs e) => this.Move(sender, offset: 1);
+
+    private void OnCopyDiagnostics(object sender, RoutedEventArgs e)
+    {
+        if (this.copyDiagnostics is not { } copy)
+        {
+            return;
+        }
+
+        MessageBox.Show(
+            this,
+            copy(),
+            "CodexBar diagnostics",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
 
     private void Move(object sender, int offset)
     {

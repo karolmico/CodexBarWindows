@@ -20,6 +20,19 @@ cd Windows
 dotnet run --project src/CodexBar.Windows
 ```
 
+Run the headless CLI over the same provider catalog:
+
+```powershell
+cd Windows
+dotnet run --project src/CodexBar.Cli -- usage
+dotnet run --project src/CodexBar.Cli -- usage --format json --pretty
+dotnet run --project src/CodexBar.Cli -- usage --provider codex --format json
+```
+
+`--provider` is repeatable (or comma-separated); the default is every provider enabled in
+`settings.json`. A partial failure still prints every provider and exits `1`; total failure exits
+`2`; bad arguments exit `64`. Add `--require-all` when any gap must fail the run.
+
 Regenerate the application icon from the upstream brand mark:
 
 ```powershell
@@ -45,7 +58,12 @@ $out  = "$env:LOCALAPPDATA\CodexBar\publish\win-x64"
 robocopy $repo $work /E /XD .git bin obj .scratch TestResults /NFL /NDL /NJH /NJS
 dotnet publish "$work\Windows\src\CodexBar.Windows\CodexBar.Windows.csproj" `
   -c Release -r win-x64 --self-contained true -p:UseAppHost=true -o $out
+dotnet publish "$work\Windows\src\CodexBar.Cli\CodexBar.Cli.csproj" `
+  -c Release -r win-x64 --self-contained true -p:UseAppHost=true -o $out
 ```
+
+Both publishes target the same folder, so the installed tree contains `CodexBar.Windows.exe`
+(tray) and `codexbar.exe` (CLI). Each keeps its own `.deps.json` and `.runtimeconfig.json`.
 
 Install and uninstall per user, without elevation:
 
@@ -62,13 +80,27 @@ launch stays invisible. Uninstall keeps `%APPDATA%\CodexBar` unless `-RemoveSett
 
 `bin/`, `obj/`, `publish/`, and `dist/` are git-ignored.
 
+## Diagnostics
+
+The tray writes a redacted rolling log to `%APPDATA%\CodexBar\logs\codexbar.log`
+(512 KB cap, three rotated files). Tokens, cookies, `Authorization` headers, emails, and file
+paths are removed before a line is written.
+
+"Copy diagnostics" in the flyout (and in Settings) builds
+`%APPDATA%\CodexBar\diagnostics-latest.json` and copies it to the clipboard. The bundle holds the
+app/runtime/OS versions, settings shape, enabled provider keys, per-provider state and error kind,
+and last fetch timings — never accounts, messages, tokens, or paths. The flyout shows an inline
+confirmation; if the clipboard is unavailable it says so and points at the saved file.
+
 ## Layout
 
 | Path | Purpose |
 | --- | --- |
-| `Windows/src/CodexBar.Core` | Platform-neutral domain: provider keys, rate windows, snapshots, fetch contracts, refresh policy, formatting, tray menu model |
-| `Windows/src/CodexBar.Windows` | WPF composition root: tray host, flyout, settings, notifications |
-| `Windows/tests/CodexBar.Core.Tests` | xUnit tests for the core seams |
+| `Windows/src/CodexBar.Core` | Platform-neutral domain: provider keys, rate windows, snapshots, fetch contracts, refresh policy, formatting, tray menu model, CLI shaping, diagnostics |
+| `Windows/src/CodexBar.Providers.Windows` | Concrete Windows provider catalog shared by the tray and the CLI (WMI + TCP table for Antigravity) |
+| `Windows/src/CodexBar.Windows` | WPF composition root: tray host, flyout, settings, notifications, clipboard |
+| `Windows/src/CodexBar.Cli` | `codexbar.exe` console host over the shared core |
+| `Windows/tests/CodexBar.Core.Tests` | xUnit tests for the core seams, including CLI golden files |
 | `docs/windows/SPEC.md` | Product and technical specification |
 | `docs/windows/GLOSSARY.md` | Domain vocabulary |
 | `docs/windows/adr` | Architecture decision records |
@@ -79,7 +111,7 @@ launch stays invisible. Uninstall keeps `%APPDATA%\CodexBar` unless `-RemoveSett
 | Package | Where | Why |
 | --- | --- | --- |
 | `Microsoft.Data.Sqlite` | `CodexBar.Core` | Read-only access to Cursor's `cursorAuth/accessToken` row |
-| `System.Management` | `CodexBar.Windows` | WMI command lines for Antigravity process discovery |
+| `System.Management` | `CodexBar.Providers.Windows` | WMI command lines for Antigravity process discovery |
 | `H.NotifyIcon.Wpf` | `CodexBar.Windows` | Tray icon and native menu |
 
 Antigravity loopback ports come from `GetExtendedTcpTable` (IP helper) rather than a subprocess.

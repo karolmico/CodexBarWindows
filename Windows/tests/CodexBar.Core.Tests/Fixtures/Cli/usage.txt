@@ -1,0 +1,20 @@
+== Codex (codex-cli) ==
+Session: 58% left [======------]
+Resets in 3h
+Weekly: 39% left [====--------]
+Resets in 2d
+Account: work
+Plan: Plus
+Organization: Contoso
+
+== Claude (claude-cli) ==
+Session: 10% left [=-----------]
+Resets in 4h
+Weekly: 70% left [========----]
+Resets in 3d
+Opus: 88% left [==========--]
+Resets after top-up
+Plan: Max
+
+== Gemini (gemini-cli) ==
+Error: Gemini credentials not found. Run `gemini` to sign in.

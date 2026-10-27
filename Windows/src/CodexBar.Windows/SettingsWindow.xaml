@@ -72,6 +72,11 @@
         </StackPanel>
 
         <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="CopyDiagnosticsButton"
+                    Content="Copy diagnostics"
+                    Margin="0,0,8,0"
+                    Click="OnCopyDiagnostics"
+                    Visibility="Collapsed" />
             <Button Content="Cancel" Width="96" IsCancel="True" Margin="0,0,8,0" />
             <Button Content="Save" Width="96" IsDefault="True" Click="OnSave" />
         </StackPanel>

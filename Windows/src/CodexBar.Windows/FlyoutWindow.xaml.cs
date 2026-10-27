@@ -2,6 +2,8 @@ using System.ComponentModel;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 using CodexBar.Core.Presentation;
 
 namespace CodexBar.Windows;
@@ -13,6 +15,7 @@ namespace CodexBar.Windows;
 public partial class FlyoutWindow : Window
 {
     private const double ScreenMargin = 8;
+    private readonly DispatcherTimer diagnosticsTimer = new() { Interval = TimeSpan.FromSeconds(4) };
     private bool isClosing;
 
     public FlyoutWindow(FlyoutModel model)
@@ -22,11 +25,28 @@ public partial class FlyoutWindow : Window
         this.InitializeComponent();
         this.DataContext = model;
         this.Loaded += (_, _) => this.FocusHighlightedCard();
+        this.diagnosticsTimer.Tick += (_, _) =>
+        {
+            this.diagnosticsTimer.Stop();
+            this.DiagnosticsStatus.Visibility = Visibility.Collapsed;
+        };
     }
 
     public event EventHandler? RefreshRequested;
 
     public event EventHandler? SettingsRequested;
+
+    public event EventHandler? DiagnosticsRequested;
+
+    /// <summary>Inline confirmation for the copy action; no toast dependency, so it always shows.</summary>
+    public void ShowDiagnosticsStatus(string message, bool isError)
+    {
+        this.DiagnosticsStatus.Text = message;
+        this.DiagnosticsStatus.Foreground = isError ? Brushes.Firebrick : Brushes.SeaGreen;
+        this.DiagnosticsStatus.Visibility = Visibility.Visible;
+        this.diagnosticsTimer.Stop();
+        this.diagnosticsTimer.Start();
+    }
 
     public void Update(FlyoutModel model)
     {
@@ -77,6 +97,9 @@ public partial class FlyoutWindow : Window
         this.CloseOnce();
     }
 
+    private void OnCopyDiagnostics(object sender, RoutedEventArgs e) =>
+        this.DiagnosticsRequested?.Invoke(this, EventArgs.Empty);
+
     private void OnDeactivated(object? sender, EventArgs e) => this.CloseOnce();
 
     private void OnKeyDown(object sender, KeyEventArgs e)
@@ -92,6 +115,12 @@ public partial class FlyoutWindow : Window
         // Deactivated also fires while the window is tearing down; never re-enter Close().
         this.isClosing = true;
         base.OnClosing(e);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        this.diagnosticsTimer.Stop();
+        base.OnClosed(e);
     }
 
     private void CloseOnce()

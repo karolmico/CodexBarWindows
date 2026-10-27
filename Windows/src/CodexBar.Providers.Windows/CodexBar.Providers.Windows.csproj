@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <RootNamespace>CodexBar.Providers.Windows</RootNamespace>
+    <AssemblyName>CodexBar.Providers.Windows</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\CodexBar.Core\CodexBar.Core.csproj" />
+  </ItemGroup>
+</Project>

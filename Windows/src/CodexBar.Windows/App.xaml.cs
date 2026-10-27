@@ -1,19 +1,17 @@
+using System.Globalization;
 using System.IO;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Threading;
+using CodexBar.Core.Diagnostics;
 using CodexBar.Core.Notifications;
 using CodexBar.Core.Persistence;
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
-using CodexBar.Core.Providers.Antigravity;
-using CodexBar.Core.Providers.Claude;
-using CodexBar.Core.Providers.Codex;
-using CodexBar.Core.Providers.Copilot;
-using CodexBar.Core.Providers.Cursor;
-using CodexBar.Core.Providers.Gemini;
 using CodexBar.Core.Refresh;
 using CodexBar.Core.Settings;
+using CodexBar.Providers.Windows;
+using CodexBar.Windows.Diagnostics;
 
 namespace CodexBar.Windows;
 
@@ -31,6 +29,8 @@ public partial class App : Application
     private FlyoutWindow? flyout;
     private SingleInstance? singleInstance;
     private NotificationDecider notificationDecider = new();
+    private RollingLogStore? logStore;
+    private DiagnosticsService? diagnostics;
     private bool isAutostartLaunch;
     private bool hasReportedUnhandledError;
 
@@ -60,22 +60,12 @@ public partial class App : Application
                 return;
             }
 
-            // Provider catalog. New providers are added here; enablement and order come from settings.
-            this.registry = new ProviderRegistry(
-            [
-                new CodexProvider(new CodexAuthFileStore(), new CodexUsageClient(this.httpClient)),
-                new ClaudeProvider(new ClaudeAuthFileStore(), new ClaudeUsageClient(this.httpClient)),
-                new GeminiProvider(new GeminiAuthFileStore(), new GeminiUsageClient(this.httpClient)),
-                new CopilotProvider(
-                    new CopilotTokenSource(),
-                    new CopilotUsageClient(this.httpClient)),
-                new CursorProvider(
-                    new CursorSessionStore(),
-                    new CursorUsageClient(this.httpClient)),
-                new AntigravityProvider(
-                    new Providers.WindowsAntigravityProcessSource(),
-                    new AntigravityUsageClient(this.httpClient)),
-            ]);
+            this.logStore = new RollingLogStore(Path.Combine(dataDirectory, "logs"));
+            this.diagnostics = new DiagnosticsService(dataDirectory);
+            this.logStore.Info($"Starting CodexBar {AppVersion()} (autostart={this.isAutostartLaunch})");
+
+            // Provider catalog. New providers are added in one place and shared with the CLI.
+            this.registry = ProviderCatalog.Create(this.httpClient);
 
             this.settingsStore = new SettingsStore(Path.Combine(dataDirectory, "settings.json"));
             this.snapshotCache = new SnapshotCache(Path.Combine(dataDirectory, "snapshots.json"));
@@ -99,6 +89,7 @@ public partial class App : Application
 
             if (loaded.Warning is { } warning)
             {
+                this.logStore?.Warn($"Settings warning: {warning}");
                 this.trayHost.Notify("CodexBar settings", warning, isWarning: true);
             }
 
@@ -137,6 +128,7 @@ public partial class App : Application
         this.trayHost = null;
         this.singleInstance?.Dispose();
         this.singleInstance = null;
+        this.logStore?.Info("Exiting.");
         this.httpClient.Dispose();
         base.OnExit(e);
     }
@@ -201,6 +193,7 @@ public partial class App : Application
             providerKey));
         window.RefreshRequested += (_, _) => _ = this.RefreshAsync();
         window.SettingsRequested += (_, _) => this.ShowSettings();
+        window.DiagnosticsRequested += (_, _) => this.CopyDiagnostics(window);
         window.Closed += (_, _) =>
         {
             if (ReferenceEquals(this.flyout, window))
@@ -237,6 +230,7 @@ public partial class App : Application
         }
 
         this.Render();
+        this.LogRefreshOutcomes();
         this.PersistSnapshots();
         this.RaiseNotifications();
 
@@ -266,6 +260,68 @@ public partial class App : Application
             // Losing the cache only costs a slower first paint on the next launch.
         }
     }
+
+    /// <summary>Writes one redacted line per provider so a later report has a real timeline.</summary>
+    private void LogRefreshOutcomes()
+    {
+        if (this.coordinator is null || this.logStore is null)
+        {
+            return;
+        }
+
+        var timings = this.coordinator.Timings.ToDictionary(static timing => timing.Key);
+        foreach (var state in this.coordinator.States)
+        {
+            var duration = timings.TryGetValue(state.Key, out var timing)
+                && timing.LastFetchDuration is { } elapsed
+                    ? string.Create(CultureInfo.InvariantCulture, $"{elapsed.TotalMilliseconds:0} ms")
+                    : "unknown";
+
+            if (state.Error is { } error)
+            {
+                this.logStore.Warn(
+                    $"{state.Key.Value} failed ({error.Kind}) in {duration}: {error.Message}",
+                    error.Cause);
+            }
+            else if (state.Snapshot is { } snapshot)
+            {
+                this.logStore.Info(
+                    $"{state.Key.Value} ok in {duration}; {snapshot.MeasuredWindows.Count()} windows");
+            }
+            else
+            {
+                this.logStore.Info($"{state.Key.Value} returned no data in {duration}");
+            }
+        }
+    }
+
+    private DiagnosticsCopyResult CopyDiagnosticsCore()
+    {
+        if (this.coordinator is null || this.settings is null || this.diagnostics is null)
+        {
+            return new DiagnosticsCopyResult(false, "No usage data yet.", FilePath: null);
+        }
+
+        var result = this.diagnostics.CaptureAndCopy(
+            this.settings,
+            this.coordinator.States,
+            this.coordinator.Timings,
+            DateTimeOffset.Now);
+
+        this.logStore?.Info($"Diagnostics copy: copied={result.Copied}, file={result.FilePath is not null}");
+        return result;
+    }
+
+    private void CopyDiagnostics(FlyoutWindow window)
+    {
+        var result = this.CopyDiagnosticsCore();
+        window.ShowDiagnosticsStatus(result.Message, isError: !result.Copied);
+    }
+
+    private string CopyDiagnosticsFromSettings() => this.CopyDiagnosticsCore().Message;
+
+    private static string AppVersion() =>
+        typeof(App).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
     /// <summary>
     /// Turns fresh provider state into toasts. The decider keeps arming state, so a refresh that did not
@@ -297,7 +353,8 @@ public partial class App : Application
     {
         var window = new SettingsWindow(
             this.settings,
-            this.registry.All.Select(provider => provider.Descriptor).ToArray())
+            this.registry.All.Select(provider => provider.Descriptor).ToArray(),
+            this.CopyDiagnosticsFromSettings)
         {
             Owner = null,
         };
@@ -338,6 +395,8 @@ public partial class App : Application
 
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        this.logStore?.Error("Unhandled dispatcher exception", e.Exception);
+
         // Keep the tray alive: a failed refresh or menu rebuild must not take the app down.
         if (!this.hasReportedUnhandledError)
         {

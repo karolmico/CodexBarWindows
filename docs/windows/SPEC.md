@@ -66,14 +66,15 @@ Provider coverage is phased. The first release matches the six providers the Lin
 - .NET 9 SDK pinned through `global.json`; WPF on `net9.0-windows`; no WinUI 3 (packaging and self-contained deployment cost outweighs the design benefit for a tray-only surface).
 - Tray integration via `H.NotifyIcon.Wpf` (Win32 `Shell_NotifyIcon` underneath), not a custom P/Invoke layer.
 - MVVM with `CommunityToolkit.Mvvm`; views stay thin, all decisions live in view models or the core.
-- One solution at the repository root, `CodexBar.Windows.sln`, with projects under `src/` and `tests/`; the existing Swift tree is untouched.
+- One solution at `Windows/CodexBar.sln`, with projects under `Windows/src/` and `Windows/tests/`; the existing Swift tree is untouched.
 
 ### Module boundaries
 
-- `CodexBar.Core` — platform-neutral domain: provider keys, rate windows, snapshots, fetch contracts, refresh policy, formatting, persistence contracts, tray menu model. No WPF, no Win32, no ambient clock or filesystem.
+- `CodexBar.Core` — platform-neutral domain: provider keys, rate windows, snapshots, fetch contracts, refresh policy, formatting, persistence contracts, tray menu model, CLI shaping, diagnostics. No WPF, no Win32, no ambient clock or filesystem.
 - `CodexBar.Core.Providers.*` — one namespace per provider, each an `IUsageProvider` implementation composed of a credential locator, an HTTP/CLI probe, and a response mapper. Providers never touch the UI.
-- `CodexBar.Windows` — composition root: tray host, flyout window, settings window, toasts, autostart, single-instance, logging. Depends on Core only.
-- `CodexBar.Cli` — optional headless entry point over the same core, mirroring `codexbar usage --format json`.
+- `CodexBar.Providers.Windows` — the concrete provider catalog shared by the tray and the CLI, plus the WMI/TCP-table Antigravity process source.
+- `CodexBar.Windows` — composition root: tray host, flyout window, settings window, toasts, autostart, single-instance, clipboard, logging. Depends on Core and the Windows provider catalog.
+- `CodexBar.Cli` — headless `codexbar.exe` over the same core: `usage --format text|json`, `--provider`, and `0/1/2/64` exit codes.
 
 ### Domain semantics (mirrors upstream, deliberately)
 
@@ -94,7 +95,7 @@ Provider coverage is phased. The first release matches the six providers the Lin
 - Settings and the last snapshot cache live under `%APPDATA%\CodexBar` as JSON with an explicit schema version.
 - Single instance via a named mutex; a second launch activates the existing instance's flyout.
 - Autostart uses the per-user `Run` key, never a machine-wide service.
-- Logging is a rolling local file with redaction of tokens, cookies, and account identifiers; "copy diagnostics" bundles versions, provider ids, error kinds, and timings only.
+- Logging is a rolling local file under `%APPDATA%\CodexBar\logs` with redaction of tokens, cookies, emails, and paths; "copy diagnostics" bundles versions, settings shape, enabled provider ids, error kinds, and timings only.
 
 ### UI
 
@@ -110,6 +111,8 @@ Provider coverage is phased. The first release matches the six providers the Lin
 - `TrayMenuBuilder.Build` — pure menu/tooltip projection, so tray behaviour is testable without Win32.
 - `UsageFormatter` — pure presentation of percentages and countdowns.
 - `SettingsStore` + `SnapshotCache` — file contracts tested against a temporary directory.
+- `CliPayloadBuilder` + `CliTextRenderer` — golden files pin the JSON and text contract.
+- `LogRedactor`, `RollingLogStore`, `DiagnosticsBundle` — redaction, rotation, and bundle shape tested without a real desktop.
 - WPF windows are not unit-tested; they are verified by running the built app and, once providers exist, by a smoke launch that asserts the process stays alive.
 
 ## Testing Decisions

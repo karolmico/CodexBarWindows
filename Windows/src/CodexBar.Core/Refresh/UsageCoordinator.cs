@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using CodexBar.Core.Presentation;
 using CodexBar.Core.Providers;
 using CodexBar.Core.Usage;
@@ -99,6 +100,16 @@ public sealed class UsageCoordinator
             .OfType<UsageSnapshot>()
             .ToArray();
 
+    /// <summary>Latest fetch duration per provider, in registry order, for the diagnostics bundle.</summary>
+    public IReadOnlyList<ProviderTiming> Timings =>
+        this.providers
+            .Select(provider => this.entries[provider.Descriptor.Key])
+            .Select(entry => new ProviderTiming(
+                entry.Provider.Descriptor.Key,
+                entry.LastDuration,
+                entry.LastFetchAt))
+            .ToArray();
+
     /// <summary>Shortest wait any provider needs before its next fetch.</summary>
     public TimeSpan NextDelay()
     {
@@ -138,6 +149,7 @@ public sealed class UsageCoordinator
     private async Task FetchIntoAsync(IUsageProvider provider, CancellationToken cancellationToken)
     {
         var entry = this.entries[provider.Descriptor.Key];
+        var started = Stopwatch.GetTimestamp();
         UsageFetchResult result;
         try
         {
@@ -155,8 +167,11 @@ public sealed class UsageCoordinator
                 cause: exception));
         }
 
+        var duration = Stopwatch.GetElapsedTime(started);
         lock (this.gate)
         {
+            entry.LastDuration = duration;
+            entry.LastFetchAt = this.clock();
             switch (result)
             {
                 case UsageFetchResult.Success success:
@@ -183,5 +198,9 @@ public sealed class UsageCoordinator
         public ProviderError? Error { get; set; }
 
         public int Failures { get; set; }
+
+        public TimeSpan? LastDuration { get; set; }
+
+        public DateTimeOffset? LastFetchAt { get; set; }
     }
 }

@@ -143,6 +143,48 @@ public sealed class UsageCoordinatorTests
         Assert.Empty(coordinator.Snapshots);
     }
 
+    [Fact]
+    public async Task An_unexpected_provider_exception_is_contained_as_an_unknown_error()
+    {
+        var coordinator = Coordinator(new ThrowingProvider());
+
+        await coordinator.RefreshAsync(CancellationToken.None);
+
+        var state = Assert.Single(coordinator.States);
+        Assert.Equal(ProviderErrorKind.Unknown, state.Error!.Kind);
+        Assert.Contains("Boom", state.Error.Cause!.Message, StringComparison.Ordinal);
+        Assert.NotNull(coordinator.Timings[0].LastFetchDuration);
+        Assert.Equal(Now, coordinator.Timings[0].LastFetchAt);
+    }
+
+    [Fact]
+    public async Task Timings_are_reported_per_provider_in_registry_order()
+    {
+        var codex = new ScriptedProvider(ProviderKeys.Codex, "Codex");
+        codex.WillReturn(ScriptedProvider.Ok(ProviderKeys.Codex, Now));
+        var claude = new ScriptedProvider(ProviderKeys.Claude, "Claude");
+        claude.WillReturn(ScriptedProvider.Error(ProviderErrorKind.Network, "offline"));
+        var coordinator = Coordinator(codex, claude);
+
+        await coordinator.RefreshAsync(CancellationToken.None);
+
+        Assert.Equal(["codex", "claude"], coordinator.Timings.Select(timing => timing.Key.Value));
+        Assert.All(coordinator.Timings, timing =>
+        {
+            Assert.NotNull(timing.LastFetchDuration);
+            Assert.True(timing.LastFetchDuration >= TimeSpan.Zero);
+            Assert.Equal(Now, timing.LastFetchAt);
+        });
+    }
+
     private static UsageCoordinator Coordinator(params IUsageProvider[] providers) =>
         new(providers, new RefreshPolicy(), () => Now);
+
+    private sealed class ThrowingProvider : IUsageProvider
+    {
+        public ProviderDescriptor Descriptor { get; } = new(ProviderKeys.Gemini, "Gemini");
+
+        public Task<UsageFetchResult> FetchAsync(CancellationToken cancellationToken) =>
+            throw new InvalidOperationException("Boom in the tray pipeline.");
+    }
 }

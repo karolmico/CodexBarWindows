@@ -3,7 +3,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 using CodexBar.Core.Providers.Antigravity;
 
-namespace CodexBar.Windows.Providers;
+namespace CodexBar.Providers.Windows;
 
 /// <summary>
 /// Windows implementation of the Antigravity process seam: WMI for command lines (the language
